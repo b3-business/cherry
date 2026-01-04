@@ -4,17 +4,22 @@
 
 ---
 
+## Epics Overview
+
+| Epic | Scope | Status |
+|------|-------|--------|
+| **Epic 1** | Core Runtime — Router structure, manual RouteDefinition coding | Active |
+| **Epic 2** | TypeSpec Emitter — Auto-generate RouteDefinitions from OpenAPI/TypeSpec | Deferred |
+
+---
+
 ## Table of Contents
 
 - [Project Structure](#project-structure)
-- [Core Runtime](#core-runtime)
+- [Core Runtime (Epic 1)](#core-runtime-epic-1)
   - [Key Types](#key-types)
   - [Client Implementation](#client-implementation)
-- [OpenAPI Generator](#openapi-generator)
-  - [Recommended Libraries](#recommended-libraries)
-  - [Generator Structure](#generator-structure)
-  - [Pipeline Overview](#pipeline-overview)
-  - [Code Emission Strategy](#code-emission-strategy)
+- [OpenAPI Generator (Epic 2 — Deferred)](#openapi-generator-epic-2--deferred)
 - [Deployment](#deployment)
 - [Build Configuration](#build-configuration)
 
@@ -29,13 +34,7 @@ cherry/
 │   ├── define.ts        # defineRoute helper
 │   ├── types.ts         # RouteDefinition, Fetcher, PreparedRequest
 │   └── index.ts         # Public exports
-├── generator/
-│   ├── cli.ts           # CLI entry point
-│   ├── parse.ts         # OpenAPI parsing & normalization
-│   ├── transform.ts     # OpenAPI → RouteDefinition IR
-│   ├── emit.ts          # IR → TypeScript code generation
-│   ├── valibot.ts       # JSON Schema → Valibot schema emission
-│   └── index.ts         # Generator exports
+├── generator/           # (Epic 2 — deferred)
 ├── package.json
 ├── tsconfig.json
 ├── tsdown.config.ts
@@ -44,7 +43,7 @@ cherry/
 
 ---
 
-## Core Runtime
+## Core Runtime (Epic 1)
 
 ### Key Types
 
@@ -203,25 +202,46 @@ export function defineRoute<
 
 ---
 
-## OpenAPI Generator
+## OpenAPI Generator (Epic 2 — Deferred)
+
+> **Status:** Deferred. Focus on Epic 1 (Core Runtime) first.
+> 
+> Epic 2 will introduce a custom TypeSpec emitter to auto-generate RouteDefinitions from OpenAPI/TypeSpec specs. For now, users write RouteDefinitions manually using `defineRoute()`.
+
+Details preserved in collapsed section for future reference:
+
+<details>
+<summary>Generator Design (click to expand)</summary>
 
 ### Recommended Libraries
 
-| Library | Purpose | Why |
-|---------|---------|-----|
-| **[@apidevtools/swagger-parser](https://github.com/APIDevTools/swagger-parser)** | OpenAPI parsing & validation | Handles $refs, validates spec, supports YAML/JSON |
-| **[openapi-types](https://github.com/kogosoftwarellc/open-api/tree/main/packages/openapi-types)** | TypeScript types for OpenAPI | Type-safe traversal of parsed spec |
-| **[yaml](https://github.com/eemeli/yaml)** | YAML parsing | Needed for YAML-formatted specs (often required) |
-| **[change-case](https://github.com/blakeembrey/change-case)** | Naming transformations | Convert `operation_id` → `operationId` |
-| **[prettier](https://prettier.io/)** | Code formatting | Format generated TypeScript |
-
-**Why not `ts-morph` or AST-based generation?**
-
-For this use case, string template emission is simpler and faster. The generated code is predictable (always `defineRoute()` calls with Valibot schemas). AST manipulation adds complexity without benefit. We use `prettier` to ensure consistent formatting.
+| Library | Purpose |
+|---------|---------|
+| @apidevtools/swagger-parser | OpenAPI parsing & validation |
+| openapi-types | TypeScript types for OpenAPI |
+| yaml | YAML parsing |
+| change-case | Naming transformations |
+| prettier | Code formatting |
 
 ### Generator Structure
 
 ```
+generator/
+├── cli.ts           # CLI entry point
+├── parse.ts         # Load & dereference OpenAPI spec
+├── transform.ts     # Spec → IR
+├── emit.ts          # IR → TypeScript
+├── valibot.ts       # JSON Schema → Valibot
+└── index.ts         # Programmatic API
+```
+
+### Pipeline
+
+```
+OpenAPI Spec → Parse → Transform → Emit → TypeScript
+```
+
+</details>
 generator/
 ├── cli.ts           # CLI entry point (commander/citty)
 ├── parse.ts         # Load & dereference OpenAPI spec
