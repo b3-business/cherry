@@ -1,682 +1,1114 @@
 # Cherry Architecture
 
-> Implementation details for the cherry API client library.
+> Implementation plan for type-safe API client library with Valibot validation and neverthrow error handling.
 
 ---
 
-## Epics Overview
+## 1. Overview
 
-| Epic | Scope | Status |
-|------|-------|--------|
-| **Epic 1** | Core Runtime — Router structure, manual RouteDefinition coding | Active |
-| **Epic 2** | TypeSpec Emitter — Auto-generate RouteDefinitions from OpenAPI/TypeSpec | Deferred |
+Cherry is a lightweight, tree-shakeable API client library that separates **route definitions** from **client runtime**. Routes are plain objects with validation schemas — import only what you use, bundle only what you import.
+
+### Key Features
+
+- **Type-safe end-to-end** — Path params, query params, body, and response all validated with Valibot
+- **neverthrow integration** — All async operations return `ResultAsync<T, CherryError>`
+- **Tagged template paths** — `path`/users/${param('id')}` for type-safe URL building
+- **Separated parameter schemas** — `pathParams`, `queryParams`, `bodyParams` for clarity
+- **Tree-shakeable** — Routes are plain imports, not registered globally
+- **Minimal runtime** — ~2KB gzipped, no dependencies beyond Valibot and neverthrow
+- **Query param control** — Native URLSearchParams with configurable array handling
+
+### Design Philosophy
+
+1. **Explicit over implicit** — No magic, everything inspectable
+2. **Errors are values** — The *runtime* API never throws; route-definition/config mistakes may throw (fail fast)
+3. **Composition over inheritance** — Middleware is userland
+4. **Type inference over annotation** — Let TypeScript do the work
+5. **Small phases** — Build basic structures first, add features incrementally
 
 ---
 
-## Table of Contents
-
-- [Project Structure](#project-structure)
-- [Core Runtime (Epic 1)](#core-runtime-epic-1)
-  - [Key Types](#key-types)
-  - [Client Implementation](#client-implementation)
-- [OpenAPI Generator (Epic 2 — Deferred)](#openapi-generator-epic-2--deferred)
-- [Deployment](#deployment)
-- [Build Configuration](#build-configuration)
-
----
-
-## Project Structure
+## 2. Project Structure
 
 ```
 cherry/
 ├── src/
-│   ├── client.ts        # createClient, call(), type merging
-│   ├── define.ts        # defineRoute helper
-│   ├── types.ts         # RouteDefinition, Fetcher, PreparedRequest
-│   └── index.ts         # Public exports
-├── generator/           # (Epic 2 — deferred)
+│   ├── index.ts         # Public exports
+│   ├── client.ts        # createClient(), call(), URL building
+│   ├── route.ts         # route() builder with validation
+│   ├── path.ts          # path(), param(), optional() tagged templates
+│   ├── types.ts         # CherryRoute, CherryResult, InferParams, etc.
+│   └── errors.ts       # Error hierarchy (CherryError, HttpError, etc.)
+├── test/
+│   ├── client.test.ts   # Client integration tests
+│   ├── route.test.ts    # Route builder tests
+│   ├── path.test.ts     # Path template tests
+│   ├── errors.test.ts   # Error handling tests
+│   └── types.test.ts    # Type-level tests with expect-type
 ├── package.json
 ├── tsconfig.json
-├── tsdown.config.ts
-└── jsr.json             # JSR publishing config
+└── tsdown.config.ts
 ```
 
 ---
 
-## Core Runtime (Epic 1)
-
-### Key Types
+## 3. Core Types
 
 ```ts
 // types.ts
 import type { BaseSchema, InferInput, InferOutput } from "valibot";
+import type { ResultAsync } from "neverthrow";
 
-/**
- * Describes an API endpoint with typed params and response.
- */
-export type RouteDefinition<
-  TParams extends BaseSchema<any, any, any>,
-  TResponse extends BaseSchema<any, any, any>,
-> = {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  path: string | ((params: InferInput<TParams>) => string);
-  params: TParams;
-  response: TResponse;
+/** HTTP methods supported by Cherry */
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/** Path template result from path() tagged template */
+export type PathTemplate = {
+  template: string;           // "/users/:id/posts/:postId"
+  paramNames: string[];       // ["id", "postId"]
 };
 
-/**
- * The prepared request object passed to the fetcher.
- */
-export type PreparedRequest = {
+/** Route definition with separated parameter schemas */
+export type CherryRoute<
+  TPathParams extends BaseSchema<any, any, any> | undefined = undefined,
+  TQueryParams extends BaseSchema<any, any, any> | undefined = undefined,
+  TBodyParams extends BaseSchema<any, any, any> | undefined = undefined,
+  TResponse extends BaseSchema<any, any, any> = BaseSchema<any, any, any>,
+> = {
+  method: HttpMethod;
+  path: PathTemplate;
+  pathParams?: TPathParams;
+  queryParams?: TQueryParams;
+  bodyParams?: TBodyParams;
+  response: TResponse;
+  queryParamOptions?: QueryParamOptions;
+  description?: string;
+};
+
+/** Options for query parameter serialization */
+export type QueryParamOptions = {
+  arrayFormat?: "repeat" | "comma" | "brackets";
+  customSerializer?: (params: Record<string, unknown>) => string;
+};
+
+/** Infer combined input params from a route */
+export type InferRouteInput<T extends CherryRoute<any, any, any, any>> =
+  (T["pathParams"] extends BaseSchema<any, any, any> ? InferInput<T["pathParams"]> : {}) &
+  (T["queryParams"] extends BaseSchema<any, any, any> ? InferInput<T["queryParams"]> : {}) &
+  (T["bodyParams"] extends BaseSchema<any, any, any> ? InferInput<T["bodyParams"]> : {});
+
+/** Infer response output from a route */
+export type InferRouteOutput<T extends CherryRoute<any, any, any, any>> =
+  T["response"] extends BaseSchema<any, any, any> ? InferOutput<T["response"]> : never;
+
+/** Cherry result type - always ResultAsync */
+export type CherryResult<T> = ResultAsync<T, CherryError>;
+
+/** Fetcher request shape (extensible for middleware) */
+export type FetchRequest = {
   url: string;
   init: RequestInit;
-  route: RouteDefinition<any, any>;
 };
 
-/**
- * Custom fetch function signature.
- */
-export type Fetcher = (req: PreparedRequest) => Promise<Response>;
+/** Fetcher function signature */
+export type Fetcher = (req: FetchRequest) => Promise<Response>;
 
-/**
- * Maps route definitions to typed async methods.
- */
-export type RoutesToMethods<T extends Record<string, RouteDefinition<any, any>>> = {
-  [K in keyof T]: T[K] extends RouteDefinition<infer P, infer R>
-    ? (params: InferInput<P>) => Promise<InferOutput<R>>
-    : never;
+/** Route tree (supports namespacing via nested objects) */
+export type RouteTree = {
+  [key: string]: CherryRoute<any, any, any, any> | RouteTree;
 };
 
-/**
- * The client interface with both `call()` and named methods.
- */
-export type Client<TRoutes extends Record<string, RouteDefinition<any, any>>> = {
-  call: <P extends BaseSchema<any, any, any>, R extends BaseSchema<any, any, any>>(
-    route: RouteDefinition<P, R>,
-    params: InferInput<P>
-  ) => Promise<InferOutput<R>>;
-} & RoutesToMethods<TRoutes>;
-```
-
-### Client Implementation
-
-```ts
-// client.ts
-import * as v from "valibot";
-import type {
-  RouteDefinition,
-  PreparedRequest,
-  Fetcher,
-  Client,
-} from "./types";
-
-export const defaultFetcher: Fetcher = (req) => fetch(req.url, req.init);
-
-export type ClientOptions<TRoutes extends Record<string, RouteDefinition<any, any>>> = {
+/** Client configuration */
+export type ClientConfig<TRoutes extends RouteTree | undefined = undefined> = {
   baseUrl: string;
-  headers?: () => Record<string, string>;
+  headers?: () => Record<string, string> | Promise<Record<string, string>>;
   fetcher?: Fetcher;
   routes?: TRoutes;
 };
 
-export function createClient<
-  const TRoutes extends Record<string, RouteDefinition<any, any>>,
->(options: ClientOptions<TRoutes>): Client<TRoutes> {
-  const fetcher = options.fetcher ?? defaultFetcher;
+export type Client<TRoutes extends RouteTree | undefined = undefined> = {
+  call: <T extends CherryRoute<any, any, any, any>>(
+    route: T,
+    params: InferRouteInput<T>,
+  ) => CherryResult<InferRouteOutput<T>>;
+} & (TRoutes extends RouteTree ? RoutesToClient<TRoutes> : {});
 
-  const call = async <P extends v.BaseSchema<any, any, any>, R extends v.BaseSchema<any, any, any>>(
-    route: RouteDefinition<P, R>,
-    params: v.InferInput<P>
-  ): Promise<v.InferOutput<R>> => {
-    // 1. Validate input params
-    const validated = v.parse(route.params, params);
+/** Convert a nested route tree into a nested client method tree */
+export type RoutesToClient<TRoutes extends RouteTree> = {
+  [K in keyof TRoutes]: TRoutes[K] extends CherryRoute<any, any, any, any>
+    ? (params: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
+    : TRoutes[K] extends RouteTree
+      ? RoutesToClient<TRoutes[K]>
+      : never;
+};
+```
 
-    // 2. Build URL
-    const path = typeof route.path === "function"
-      ? route.path(validated)
-      : route.path;
+---
 
-    const url = new URL(path, options.baseUrl);
+## 4. Error Hierarchy
 
-    // 3. Handle query params for GET requests
-    if (route.method === "GET") {
-      for (const [key, value] of Object.entries(validated)) {
-        if (value !== undefined && !path.includes(key)) {
-          url.searchParams.set(key, String(value));
+All errors extend `CherryError` for consistent handling:
+
+```ts
+// errors.ts
+import { errAsync, ResultAsync } from "neverthrow";
+
+/** Base error class for all Cherry errors */
+export abstract class CherryError extends Error {
+  abstract readonly type: string;
+  abstract readonly retryable: boolean;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = this.constructor.name;
+  }
+}
+
+/** HTTP response errors (4xx, 5xx) */
+export class HttpError extends CherryError {
+  readonly type = "HttpError";
+  readonly retryable: boolean;
+
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly body?: unknown,
+    cause?: unknown,
+  ) {
+    super(`HTTP ${status}: ${statusText}`, { cause });
+    this.retryable = status >= 500 || status === 429;
+  }
+}
+
+/** Valibot validation errors */
+export class ValidationError extends CherryError {
+  readonly type = "ValidationError";
+  readonly retryable = false;
+
+  constructor(
+    public readonly target: "request" | "response",
+    public readonly issues: unknown[],
+    cause?: unknown,
+  ) {
+    super(`Validation failed for ${target}`, { cause });
+  }
+}
+
+/** Network/fetch errors */
+export class NetworkError extends CherryError {
+  readonly type = "NetworkError";
+  readonly retryable = true;
+
+  constructor(cause?: unknown) {
+    super(`Network error`, { cause });
+  }
+}
+
+/** Catch-all for unexpected errors */
+export class UnknownCherryError extends CherryError {
+  readonly type = "UnknownCherryError";
+  readonly retryable = false;
+
+  constructor(cause?: unknown) {
+    super(`Unknown error`, { cause });
+  }
+}
+
+/** Type guard for CherryError */
+export function isCherryError(error: unknown): error is CherryError {
+  return error instanceof CherryError;
+}
+
+/** Helper to create error ResultAsync */
+export function cherryErr<T>(error: CherryError): ResultAsync<T, CherryError> {
+  return errAsync(error);
+}
+```
+
+---
+
+## 5. Path Templates
+
+Tagged template functions for type-safe path building:
+
+```ts
+// path.ts
+
+/** Branded type for path parameter markers */
+declare const PathParamBrand: unique symbol;
+export type PathParam<T extends string> = string & { [PathParamBrand]: true };
+
+/** Branded type for optional path parameter markers */
+declare const OptionalParamBrand: unique symbol;
+export type OptionalParam<T extends string> = string & { [OptionalParamBrand]: true };
+
+/** Create a path parameter marker */
+export function param<T extends string>(name: T): PathParam<T> {
+  return `:${name}` as PathParam<T>;
+}
+
+/** Create an optional path parameter marker */
+export function optional<T extends string>(name: T): OptionalParam<T> {
+  return `(:${name})` as OptionalParam<T>;
+}
+
+/** Tagged template for building path templates */
+export function path(
+  strings: TemplateStringsArray,
+  ...params: (PathParam | OptionalParam)[]
+): PathTemplate {
+  const paramNames: string[] = [];
+  let template = strings[0];
+
+  for (let i = 0; i < params.length; i++) {
+    const p = params[i];
+    template += p + strings[i + 1];
+
+    // Extract param name from `:name` or `(:name)`
+    const match = p.match(/^\(?:(\w+)\)?$/);
+    if (match) {
+      paramNames.push(match[1]);
+    }
+  }
+
+  return { template, paramNames };
+}
+```
+
+### Usage Examples
+
+```ts
+// Simple path with one param
+const userPath = path`/users/${param("id")}`;
+// { template: "/users/:id", paramNames: ["id"] }
+
+// Multiple params
+const postPath = path`/users/${param("userId")}/posts/${param("postId")}`;
+// { template: "/users/:userId/posts/:postId", paramNames: ["userId", "postId"] }
+
+// Optional params
+const versionedPath = path`/api${optional("version")}/users`;
+// { template: "/api(:version)/users", paramNames: ["version"] }
+
+// No params
+const staticPath = path`/health`;
+// { template: "/health", paramNames: [] }
+```
+
+---
+
+## 6. Route Builder
+
+The `route()` function validates configuration and returns a typed route:
+
+```ts
+// route.ts
+import * as v from "valibot";
+import type { CherryRoute, HttpMethod, PathTemplate, QueryParamOptions } from "./types";
+
+/** HTTP method schema */
+const HttpMethodSchema = v.picklist(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+
+/** Route configuration input */
+export type RouteConfig<
+  TPathParams extends v.BaseSchema<any, any, any> | undefined,
+  TQueryParams extends v.BaseSchema<any, any, any> | undefined,
+  TBodyParams extends v.BaseSchema<any, any, any> | undefined,
+  TResponse extends v.BaseSchema<any, any, any>,
+> = {
+  method: HttpMethod;
+  path: PathTemplate;
+  pathParams?: TPathParams;
+  queryParams?: TQueryParams;
+  bodyParams?: TBodyParams;
+  response: TResponse;
+  queryParamOptions?: QueryParamOptions;
+  description?: string;
+};
+
+/**
+ * Create a validated route definition.
+ * Validates that all path params have corresponding schema entries.
+ */
+export function route<
+  TPathParams extends v.BaseSchema<any, any, any> | undefined,
+  TQueryParams extends v.BaseSchema<any, any, any> | undefined,
+  TBodyParams extends v.BaseSchema<any, any, any> | undefined,
+  TResponse extends v.BaseSchema<any, any, any>,
+>(
+  config: RouteConfig<TPathParams, TQueryParams, TBodyParams, TResponse>,
+): CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse> {
+  // Validate HTTP method
+  v.parse(HttpMethodSchema, config.method);
+
+  // Validate path params match schema
+  if (config.path.paramNames.length > 0) {
+    if (!config.pathParams) {
+      throw new Error(
+        `Route has path params [${config.path.paramNames.join(", ")}] but no pathParams schema`
+      );
+    }
+
+    // Check each param name exists in schema
+    const schemaKeys = getSchemaKeys(config.pathParams);
+    for (const paramName of config.path.paramNames) {
+      if (!schemaKeys.includes(paramName)) {
+        throw new Error(
+          `Path param ":${paramName}" not found in pathParams schema. ` +
+          `Available: [${schemaKeys.join(", ")}]`
+        );
+      }
+    }
+  }
+
+  return config as CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse>;
+}
+
+/** Extract keys from a Valibot object schema */
+function getSchemaKeys(schema: v.BaseSchema<any, any, any>): string[] {
+  // Valibot v1 ObjectSchema exposes `entries` as a plain object
+  if (
+    "entries" in schema &&
+    typeof (schema as any).entries === "object" &&
+    (schema as any).entries !== null
+  ) {
+    return Object.keys((schema as any).entries);
+  }
+  return [];
+}
+```
+
+### Usage Examples
+
+```ts
+import * as v from "valibot";
+import { route, path, param } from "@b3b/cherry";
+
+// GET with path and query params
+export const getUser = route({
+  method: "GET",
+  path: path`/users/${param("id")}`,
+  pathParams: v.object({
+    id: v.pipe(v.string(), v.uuid()),
+  }),
+  queryParams: v.object({
+    include: v.optional(v.boolean()),
+  }),
+  response: v.object({
+    id: v.string(),
+    name: v.string(),
+    email: v.string(),
+  }),
+  description: "Get a user by ID",
+});
+
+// POST with body params
+export const createUser = route({
+  method: "POST",
+  path: path`/users`,
+  bodyParams: v.object({
+    name: v.string(),
+    email: v.pipe(v.string(), v.email()),
+    role: v.optional(v.enum(["admin", "user"])),
+  }),
+  response: v.object({
+    id: v.string(),
+    name: v.string(),
+    email: v.string(),
+    role: v.string(),
+  }),
+});
+
+// DELETE with path params only
+export const deleteUser = route({
+  method: "DELETE",
+  path: path`/users/${param("id")}`,
+  pathParams: v.object({
+    id: v.string(),
+  }),
+  response: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+});
+```
+
+---
+
+## 7. Query Serialization
+
+Query parameters use native `URLSearchParams` with configurable array handling:
+
+```ts
+// client.ts (partial)
+
+/** Serialize query params to URL search string */
+function serializeQueryParams(
+  params: Record<string, unknown>,
+  options?: QueryParamOptions,
+): string {
+  // Custom serializer takes precedence
+  if (options?.customSerializer) {
+    return options.customSerializer(params);
+  }
+
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+
+    if (Array.isArray(value)) {
+      switch (options?.arrayFormat ?? "repeat") {
+        case "repeat":
+          // ?tags=a&tags=b
+          for (const item of value) {
+            searchParams.append(key, String(item));
+          }
+          break;
+        case "comma":
+          // ?tags=a,b
+          searchParams.set(key, value.join(","));
+          break;
+        case "brackets":
+          // ?tags[]=a&tags[]=b
+          for (const item of value) {
+            searchParams.append(`${key}[]`, String(item));
+          }
+          break;
+      }
+    } else {
+      searchParams.set(key, String(value));
+    }
+  }
+
+  return searchParams.toString();
+}
+```
+
+### Custom Serializer Example
+
+```ts
+const searchRoute = route({
+  method: "GET",
+  path: path`/search`,
+  queryParams: v.object({
+    filters: v.object({
+      category: v.optional(v.string()),
+      minPrice: v.optional(v.number()),
+      maxPrice: v.optional(v.number()),
+    }),
+  }),
+  response: v.array(v.object({ id: v.string(), name: v.string() })),
+  queryParamOptions: {
+    customSerializer: (params) => {
+      // Flatten nested objects: filters[category]=books
+      const flat: string[] = [];
+      for (const [key, value] of Object.entries(params)) {
+        if (typeof value === "object" && value !== null) {
+          for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+            flat.push(`${key}[${k}]=${encodeURIComponent(String(v))}`);
+          }
+        } else {
+          flat.push(`${key}=${encodeURIComponent(String(value))}`);
         }
+      }
+      return flat.join("&");
+    },
+  },
+});
+```
+
+---
+
+## 8. Client Core
+
+The client provides `call()` for executing routes with full type safety:
+
+```ts
+// client.ts
+import { ResultAsync } from "neverthrow";
+import * as v from "valibot";
+import type {
+  CherryRoute,
+  CherryResult,
+  InferRouteInput,
+  InferRouteOutput,
+  Fetcher,
+  FetchRequest,
+  ClientConfig,
+  RouteTree,
+  RoutesToClient,
+} from "./types";
+import { HttpError, ValidationError, NetworkError, UnknownCherryError } from "./errors";
+
+/** Default fetcher using global fetch */
+const defaultFetcher: Fetcher = (req) => fetch(req.url, req.init);
+
+/** Create a Cherry client */
+export function createClient<TRoutes extends RouteTree | undefined = undefined>(
+  config: ClientConfig<TRoutes>,
+) {
+  const fetcher = config.fetcher ?? defaultFetcher;
+
+  /**
+   * Execute a route with params.
+   * Returns ResultAsync<T, CherryError>.
+   */
+  function call<T extends CherryRoute<any, any, any, any>>(
+    route: T,
+    params: InferRouteInput<T>,
+  ): CherryResult<InferRouteOutput<T>> {
+    return ResultAsync.fromPromise(
+      executeRoute(route, params),
+      (error) => {
+        if (error instanceof HttpError) return error;
+        if (error instanceof ValidationError) return error;
+        if (error instanceof NetworkError) return error;
+        return new UnknownCherryError(error);
+      },
+    );
+  }
+
+  /**
+   * Execute route and return raw output.
+   * This may throw; `call()` wraps it into ResultAsync.
+   */
+  async function executeRoute<T extends CherryRoute<any, any, any, any>>(
+    route: T,
+    params: InferRouteInput<T>,
+  ): Promise<InferRouteOutput<T>> {
+    // 1. Validate and extract path params
+    let pathParams: Record<string, unknown> = {};
+    if (route.pathParams) {
+      const result = v.safeParse(route.pathParams, params);
+      if (!result.success) throw new ValidationError("request", result.error.issues);
+      pathParams = result.output;
+    }
+
+    // 2. Validate and extract query params
+    let queryParams: Record<string, unknown> = {};
+    if (route.queryParams) {
+      const result = v.safeParse(route.queryParams, params);
+      if (!result.success) throw new ValidationError("request", result.error.issues);
+      queryParams = result.output;
+    }
+
+    // 3. Validate and extract body params
+    let bodyParams: Record<string, unknown> | undefined;
+    if (route.bodyParams) {
+      const result = v.safeParse(route.bodyParams, params);
+      if (!result.success) throw new ValidationError("request", result.error.issues);
+      bodyParams = result.output;
+    }
+
+    // 4. Build URL
+    let url = route.path.template;
+    for (const [key, value] of Object.entries(pathParams)) {
+      url = url.replace(`:${key}`, encodeURIComponent(String(value)));
+    }
+
+    const fullUrl = new URL(url, config.baseUrl);
+
+    // 5. Add query params
+    if (Object.keys(queryParams).length > 0) {
+      fullUrl.search = serializeQueryParams(queryParams, route.queryParamOptions);
+    }
+
+    // 6. Build request
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(await config.headers?.()),
+    };
+
+    const init: RequestInit = {
+      method: route.method,
+      headers,
+    };
+
+    if (bodyParams && route.method !== "GET") {
+      init.body = JSON.stringify(bodyParams);
+    }
+
+    const req: FetchRequest = {
+      url: fullUrl.toString(),
+      init,
+    };
+
+    // 7. Execute fetch
+    let response: Response;
+    try {
+      response = await fetcher(req);
+    } catch (error) {
+      throw new NetworkError(error);
+    }
+
+    // 8. Handle HTTP errors
+    if (!response.ok) {
+      const body = await response.text().catch(() => undefined);
+      throw new HttpError(response.status, response.statusText, body);
+    }
+
+    // 9. Parse and validate response
+    const json = await response.json();
+    const result = v.safeParse(route.response, json);
+    if (!result.success) throw new ValidationError("response", result.error.issues);
+
+    return result.output;
+  }
+
+  function forgeRouteMethods(routes: RouteTree): RoutesToClient<RouteTree> {
+    const out: any = {};
+
+    for (const [key, value] of Object.entries(routes)) {
+      if (value && typeof value === "object" && "method" in value && "path" in value) {
+        // Leaf route -> function that delegates to call()
+        out[key] = (params: any) => call(value as any, params);
+      } else if (value && typeof value === "object") {
+        // Namespace -> recurse
+        out[key] = forgeRouteMethods(value as RouteTree);
       }
     }
 
-    // 4. Prepare request init
-    const init: RequestInit = {
-      method: route.method,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers?.(),
-      },
-    };
-
-    // 5. Add body for non-GET requests
-    if (route.method !== "GET") {
-      init.body = JSON.stringify(validated);
-    }
-
-    // 6. Execute fetch
-    const res = await fetcher({ url: url.toString(), init, route });
-
-    // 7. Parse and validate response
-    const json = await res.json();
-    return v.parse(route.response, json);
-  };
-
-  // Build client with call() method
-  const client = { call } as Client<TRoutes>;
-
-  // Add named methods for each route
-  for (const [name, route] of Object.entries(options.routes ?? {})) {
-    (client as any)[name] = (params: unknown) => call(route, params);
+    return out;
   }
 
-  return client;
+  const routes = config.routes ? forgeRouteMethods(config.routes) : {};
+  return { call, ...routes } as unknown as (TRoutes extends RouteTree
+    ? Client<TRoutes>
+    : Client<undefined>);
 }
 ```
 
-### Define Route Helper
+### Usage Example
 
 ```ts
-// define.ts
-import type { BaseSchema } from "valibot";
-import type { RouteDefinition } from "./types";
+import { createClient } from "@b3b/cherry";
+import { getUser, createUser } from "./routes";
 
-/**
- * Type-safe route definition helper.
- * Identity function that provides type inference.
- */
-export function defineRoute<
-  TParams extends BaseSchema<any, any, any>,
-  TResponse extends BaseSchema<any, any, any>,
->(route: RouteDefinition<TParams, TResponse>): RouteDefinition<TParams, TResponse> {
-  return route;
-}
-```
-
----
-
-## OpenAPI Generator (Epic 2 — Deferred)
-
-> **Status:** Deferred. Focus on Epic 1 (Core Runtime) first.
-> 
-> Epic 2 will introduce a custom TypeSpec emitter to auto-generate RouteDefinitions from OpenAPI/TypeSpec specs. For now, users write RouteDefinitions manually using `defineRoute()`.
-
-Details preserved in collapsed section for future reference:
-
-<details>
-<summary>Generator Design (click to expand)</summary>
-
-### Recommended Libraries
-
-| Library | Purpose |
-|---------|---------|
-| @apidevtools/swagger-parser | OpenAPI parsing & validation |
-| openapi-types | TypeScript types for OpenAPI |
-| yaml | YAML parsing |
-| change-case | Naming transformations |
-| prettier | Code formatting |
-
-### Generator Structure
-
-```
-generator/
-├── cli.ts           # CLI entry point
-├── parse.ts         # Load & dereference OpenAPI spec
-├── transform.ts     # Spec → IR
-├── emit.ts          # IR → TypeScript
-├── valibot.ts       # JSON Schema → Valibot
-└── index.ts         # Programmatic API
-```
-
-### Pipeline
-
-```
-OpenAPI Spec → Parse → Transform → Emit → TypeScript
-```
-
-</details>
-generator/
-├── cli.ts           # CLI entry point (commander/citty)
-├── parse.ts         # Load & dereference OpenAPI spec
-├── transform.ts     # Spec → Intermediate Representation
-├── emit.ts          # IR → TypeScript strings
-├── valibot.ts       # JSON Schema → Valibot schema code
-└── index.ts         # Programmatic API
-```
-
-### Pipeline Overview
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   OpenAPI Spec  │────▶│      Parse      │────▶│    Transform    │────▶│      Emit       │
-│   (JSON/YAML)   │     │  (dereference)  │     │   (normalize)   │     │  (TypeScript)   │
-└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
-```
-
-#### 1. Parse Phase (`parse.ts`)
-
-```ts
-import SwaggerParser from "@apidevtools/swagger-parser";
-import type { OpenAPIV3 } from "openapi-types";
-
-export async function parseSpec(input: string): Promise<OpenAPIV3.Document> {
-  // Parses JSON/YAML, dereferences all $refs
-  const api = await SwaggerParser.dereference(input);
-  return api as OpenAPIV3.Document;
-}
-```
-
-#### 2. Transform Phase (`transform.ts`)
-
-Convert OpenAPI operations to an intermediate representation:
-
-```ts
-import type { OpenAPIV3 } from "openapi-types";
-
-export type RouteIR = {
-  name: string;                    // camelCase operation name
-  tag: string;                     // Namespace/file grouping
-  method: string;                  // HTTP method
-  path: string;                    // URL path with {param} syntax
-  pathParams: ParamIR[];           // Path parameters
-  queryParams: ParamIR[];          // Query parameters
-  bodySchema: SchemaIR | null;     // Request body schema
-  responseSchema: SchemaIR;        // Response schema
-  description?: string;            // JSDoc comment
-};
-
-export type ParamIR = {
-  name: string;
-  required: boolean;
-  schema: SchemaIR;
-};
-
-export type SchemaIR =
-  | { type: "string"; format?: string }
-  | { type: "number" }
-  | { type: "boolean" }
-  | { type: "array"; items: SchemaIR }
-  | { type: "object"; properties: Record<string, SchemaIR & { required: boolean }> }
-  | { type: "union"; variants: SchemaIR[] }
-  | { type: "literal"; value: string | number | boolean }
-  | { type: "unknown" };
-
-export function transformSpec(spec: OpenAPIV3.Document): RouteIR[] {
-  const routes: RouteIR[] = [];
-
-  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
-    for (const method of ["get", "post", "put", "patch", "delete"] as const) {
-      const operation = pathItem?.[method];
-      if (!operation) continue;
-
-      routes.push({
-        name: toOperationName(operation.operationId ?? `${method}${path}`),
-        tag: operation.tags?.[0] ?? "default",
-        method: method.toUpperCase(),
-        path,
-        pathParams: extractPathParams(operation, pathItem),
-        queryParams: extractQueryParams(operation, pathItem),
-        bodySchema: extractRequestBody(operation),
-        responseSchema: extractResponse(operation),
-        description: operation.summary ?? operation.description,
-      });
-    }
-  }
-
-  return routes;
-}
-```
-
-#### 3. Emit Phase (`emit.ts`)
-
-Generate TypeScript files from IR:
-
-```ts
-import type { RouteIR } from "./transform";
-import { schemaToValibot } from "./valibot";
-
-export function emitRouteFile(routes: RouteIR[], tag: string): string {
-  const imports = `import * as v from "valibot";\nimport { defineRoute } from "@b3b/cherry";\n\n`;
-
-  const routeCode = routes
-    .filter((r) => r.tag === tag)
-    .map(emitRoute)
-    .join("\n\n");
-
-  return imports + routeCode;
-}
-
-function emitRoute(route: RouteIR): string {
-  const paramsSchema = buildParamsSchema(route);
-  const responseSchema = schemaToValibot(route.responseSchema);
-
-  const pathExpr = route.pathParams.length > 0
-    ? `(p) => \`${route.path.replace(/\{(\w+)\}/g, "${p.$1}")}\``
-    : `"${route.path}"`;
-
-  const jsdoc = route.description
-    ? `/**\n * ${route.description}\n */\n`
-    : "";
-
-  return `${jsdoc}export const ${route.name} = defineRoute({
-  method: "${route.method}",
-  path: ${pathExpr},
-  params: ${paramsSchema},
-  response: ${responseSchema},
-});`;
-}
-
-function buildParamsSchema(route: RouteIR): string {
-  const allParams = [...route.pathParams, ...route.queryParams];
-
-  if (allParams.length === 0 && !route.bodySchema) {
-    return "v.object({})";
-  }
-
-  const fields = allParams.map((p) => {
-    const schema = schemaToValibot(p.schema);
-    return p.required ? `${p.name}: ${schema}` : `${p.name}: v.optional(${schema})`;
-  });
-
-  // Merge body schema fields for POST/PUT/PATCH
-  if (route.bodySchema?.type === "object") {
-    for (const [name, prop] of Object.entries(route.bodySchema.properties)) {
-      const schema = schemaToValibot(prop);
-      fields.push(prop.required ? `${name}: ${schema}` : `${name}: v.optional(${schema})`);
-    }
-  }
-
-  return `v.object({\n    ${fields.join(",\n    ")},\n  })`;
-}
-```
-
-#### 4. Valibot Schema Generation (`valibot.ts`)
-
-Convert JSON Schema / OpenAPI Schema to Valibot code:
-
-```ts
-import type { SchemaIR } from "./transform";
-
-export function schemaToValibot(schema: SchemaIR): string {
-  switch (schema.type) {
-    case "string":
-      if (schema.format === "date-time") return "v.pipe(v.string(), v.isoTimestamp())";
-      if (schema.format === "email") return "v.pipe(v.string(), v.email())";
-      if (schema.format === "uuid") return "v.pipe(v.string(), v.uuid())";
-      if (schema.format === "uri") return "v.pipe(v.string(), v.url())";
-      return "v.string()";
-
-    case "number":
-      return "v.number()";
-
-    case "boolean":
-      return "v.boolean()";
-
-    case "array":
-      return `v.array(${schemaToValibot(schema.items)})`;
-
-    case "object":
-      const fields = Object.entries(schema.properties).map(([name, prop]) => {
-        const fieldSchema = schemaToValibot(prop);
-        return prop.required
-          ? `${safeName(name)}: ${fieldSchema}`
-          : `${safeName(name)}: v.optional(${fieldSchema})`;
-      });
-      return `v.object({ ${fields.join(", ")} })`;
-
-    case "union":
-      const variants = schema.variants.map(schemaToValibot);
-      return `v.union([${variants.join(", ")}])`;
-
-    case "literal":
-      return typeof schema.value === "string"
-        ? `v.literal("${schema.value}")`
-        : `v.literal(${schema.value})`;
-
-    case "unknown":
-    default:
-      return "v.unknown()";
-  }
-}
-
-function safeName(name: string): string {
-  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : `"${name}"`;
-}
-```
-
-### CLI Interface
-
-```ts
-// cli.ts
-import { defineCommand, runMain } from "citty";
-import { parseSpec } from "./parse";
-import { transformSpec } from "./transform";
-import { emitRouteFile } from "./emit";
-import { mkdir, writeFile } from "fs/promises";
-import { join } from "path";
-import { format } from "prettier";
-
-const main = defineCommand({
-  meta: { name: "cherry", description: "Generate route definitions from OpenAPI" },
-  args: {
-    input: { type: "string", required: true, description: "OpenAPI spec path or URL" },
-    output: { type: "string", required: true, description: "Output directory" },
-  },
-  async run({ args }) {
-    const spec = await parseSpec(args.input);
-    const routes = transformSpec(spec);
-
-    // Group by tag
-    const byTag = Map.groupBy(routes, (r) => r.tag);
-
-    await mkdir(args.output, { recursive: true });
-
-    for (const [tag, tagRoutes] of byTag) {
-      const code = emitRouteFile(tagRoutes, tag);
-      const formatted = await format(code, { parser: "typescript", printWidth: 100 });
-      await writeFile(join(args.output, `${tag}.ts`), formatted);
-    }
-
-    console.log(`✓ Generated ${routes.length} routes in ${byTag.size} files`);
-  },
+const client = createClient({
+  baseUrl: "https://api.example.com",
+  headers: () => ({
+    Authorization: `Bearer ${process.env.API_TOKEN}`,
+  }),
 });
 
-runMain(main);
+// Type-safe call with neverthrow
+const result = await client.call(getUser, { id: "123" });
+
+result.match(
+  (user) => console.log("User:", user.name),
+  (error) => {
+    if (error.type === "HttpError" && error.status === 404) {
+      console.log("User not found");
+    } else {
+      console.error("Error:", error.message);
+    }
+  }
+);
 ```
 
 ---
 
-## Deployment
+## 9. Implementation Phases
 
-### Package Registry Targets
+### Phase 1: Foundation Types & Errors
 
-Cherry is published to both npm and JSR:
+**Goal**: Establish type system and error hierarchy.
 
-| Registry | Package Name | Usage |
-|----------|--------------|-------|
-| **npm** | `@b3b/cherry` | `npm install @b3b/cherry` |
-| **JSR** | `@b3b/cherry` | `deno add jsr:@b3b/cherry` |
+**Files**:
+- `src/types.ts` — Core type definitions
+- `src/errors.ts` — Error classes
 
-### JSR Configuration
+**Tests** (`test/errors.test.ts`):
+- All error classes extend CherryError
+- Each error has `type`, `retryable`, `message` properties
+- Type guards work correctly
+- Types compile without errors
 
-```jsonc
-// jsr.json
-{
-  "name": "@b3b/cherry",
-  "version": "0.1.0",
-  "exports": "./src/index.ts",
-  "publish": {
-    "include": ["src/**/*.ts", "README.md", "LICENSE"]
-  }
-}
+**Acceptance Criteria**:
+- [ ] All error classes extend CherryError
+- [ ] Each error has `type`, `retryable`, `message` properties
+- [ ] Type guards work correctly
+- [ ] Types compile without errors
+
+---
+
+### Phase 2: Path Templates
+
+**Goal**: Implement tagged template path builder.
+
+**Files**:
+- `src/path.ts` — `path()`, `param()`, `optional()` functions
+
+**Tests** (`test/path.test.ts`):
+- Simple path with no params returns correct template
+- Path with single param extracts param name
+- Path with multiple params extracts all param names
+- Optional param syntax works (`optional("version")`)
+- Type inference returns PathTemplate
+
+**Acceptance Criteria**:
+- [ ] `path()` returns `PathTemplate` with template and paramNames
+- [ ] `param()` creates `:name` markers
+- [ ] `optional()` creates `(:name)` markers
+- [ ] Multiple params in one path work correctly
+- [ ] Type inference is correct
+
+---
+
+### Phase 3: Route Builder
+
+**Goal**: Implement route configuration with validation.
+
+**Files**:
+- `src/route.ts` — `route()` function with validation
+
+**Tests** (`test/route.test.ts`):
+- Creates valid route with all params
+- Throws error if path param missing from schema
+- Throws error if path param not in schema keys
+- Validates HTTP method with Valibot
+- Type inference works for combined input params
+- Type inference works for response output
+
+**Acceptance Criteria**:
+- [ ] `route()` validates method is valid HTTP method
+- [ ] `route()` validates all path params have schema entries
+- [ ] `route()` throws error for missing/extra path params
+- [ ] Type inference works for combined input params
+- [ ] Type inference works for response output
+
+---
+
+### Phase 4: Query Serialization
+
+**Goal**: Implement query parameter serialization.
+
+**Files**:
+- `src/client.ts` — `serializeQueryParams()` function (internal)
+
+**Tests** (`test/client.test.ts` — partial):
+- Serializes simple key-value params correctly
+- Arrays serialize with repeat format (default)
+- Arrays serialize with comma format
+- Arrays serialize with brackets format
+- Custom serializer overrides default behavior
+- Undefined/null values are omitted
+
+**Acceptance Criteria**:
+- [ ] Simple key-value params serialize correctly
+- [ ] Arrays serialize with configurable format (repeat/comma/brackets)
+- [ ] Custom serializer overrides default behavior
+- [ ] Undefined/null values are omitted
+
+---
+
+### Phase 5: Client Core
+
+**Goal**: Implement `createClient()` and `call()`.
+
+**Files**:
+- `src/client.ts` — Full implementation with `createClient()` and `call()`
+
+**Tests** (`test/client.test.ts` — full):
+- Successful call returns Ok result with correct data
+- HTTP error (4xx) returns Err with HttpError
+- HTTP error (5xx) returns Err with HttpError
+- Invalid request validation returns Err with ValidationError
+- Invalid response validation returns Err with ValidationError
+- Network error returns Err with NetworkError
+- Path params are substituted in URL
+- Query params are appended to URL
+- Body params are sent as JSON
+- Headers are merged with config headers
+
+**Acceptance Criteria**:
+- [ ] `createClient()` accepts baseUrl, headers, fetcher
+- [ ] `call()` returns `ResultAsync<T, CherryError>`
+- [ ] Path params are substituted in URL
+- [ ] Query params are appended to URL
+- [ ] Body params are sent as JSON
+- [ ] HTTP errors return `HttpError`
+- [ ] Validation errors return `ValidationError`
+- [ ] Network errors return `NetworkError`
+- [ ] Response is validated with schema
+
+---
+
+### Phase 6: Integration & Polish
+
+**Goal**: End-to-end testing and public API finalization.
+
+**Files**:
+- `src/index.ts` — Public exports
+- `test/integration.test.ts` — Full integration tests
+
+**Tests** (`test/integration.test.ts`):
+- Full CRUD workflow (create, read, update, delete)
+- Error handling with neverthrow (match, map, chain, orElse)
+- Multiple concurrent requests work correctly
+- Custom fetcher with retry logic works
+- Headers function is called for each request
+- All public exports are available from index
+
+**Acceptance Criteria**:
+- [ ] All public APIs exported from index.ts
+- [ ] Full CRUD workflow works end-to-end
+- [ ] Error chaining with neverthrow works
+- [ ] Custom fetcher is supported
+- [ ] All tests pass
+
+---
+
+## 10. Testing Strategy
+
+### Unit Tests
+
+Each module has corresponding test file:
+
+```
+test/
+├── errors.test.ts     # Error class behavior
+├── path.test.ts       # Path template parsing
+├── route.test.ts      # Route validation
+├── client.test.ts     # Client operations
+└── types.test.ts      # Type-level assertions
 ```
 
-### Publishing Workflow
+### Type Tests
+
+Use `expect-type` for compile-time type assertions:
+
+```ts
+import { expectTypeOf } from "expect-type";
+
+// Test type inference
+expectTypeOf<InferRouteInput<typeof myRoute>>().toEqualTypeOf<{
+  id: string;
+  include?: string[];
+}>();
+
+// Test return types
+expectTypeOf(client.call(route, params)).toEqualTypeOf<CherryResult<User>>();
+```
+
+### Running Tests
 
 ```bash
-# Build for npm
-bun run build
+# Run all tests
+bun test
 
-# Publish to npm
-npm publish --access public
+# Run specific test file
+bun test errors.test.ts
 
-# Publish to JSR
-bunx jsr publish
-```
-
-### CI/CD (GitHub Actions)
-
-```yaml
-# .github/workflows/publish.yml
-name: Publish
-
-on:
-  release:
-    types: [created]
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-
-      - run: bun install
-      - run: bun run build
-      - run: bun run test
-
-      # Publish to npm
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # Publish to JSR
-      - run: bunx jsr publish
-        env:
-          JSR_TOKEN: ${{ secrets.JSR_TOKEN }}
+# Run with coverage
+bun test --coverage
 ```
 
 ---
 
-## Build Configuration
+## 11. Type Validation with expect-type
 
-### tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
-```
-
-### tsdown.config.ts
+### Key Patterns
 
 ```ts
-import { defineConfig } from "tsdown";
+import { expectTypeOf } from "expect-type";
 
-export default defineConfig({
-  entry: ["src/index.ts", "generator/cli.ts"],
-  format: ["esm"],
-  dts: true,
-  clean: true,
-  minify: true,
-  splitting: true,
-  treeshake: true,
+// Exact type equality
+expectTypeOf<Actual>().toEqualTypeOf<Expected>();
+
+// Partial matching (allows extra properties)
+expectTypeOf<Actual>().toMatchObjectType<{ required: string }>();
+
+// Subtype checking
+expectTypeOf<Specific>().toExtend<General>();
+
+// Property checking
+expectTypeOf<Obj>().toHaveProperty("key").toBeString();
+
+// Negation
+expectTypeOf<Actual>().not.toBeAny();
+```
+
+### Testing Generic Types
+
+```ts
+// Test that InferRouteInput correctly combines schemas
+type TestRoute = CherryRoute<
+  typeof pathSchema,
+  typeof querySchema,
+  typeof bodySchema,
+  typeof responseSchema
+>;
+
+expectTypeOf<InferRouteInput<TestRoute>>().toEqualTypeOf<{
+  id: string;        // from pathParams
+  page?: number;      // from queryParams
+  name: string;       // from bodyParams
+}>();
+```
+
+---
+
+## 12. API Examples
+
+### Basic Usage
+
+```ts
+import * as v from "valibot";
+import { createClient, route, path, param } from "@b3b/cherry";
+
+// Define routes
+export const getUser = route({
+  method: "GET",
+  path: path`/users/${param("id")}`,
+  pathParams: v.object({
+    id: v.pipe(v.string(), v.uuid()),
+  }),
+  queryParams: v.object({
+    include: v.optional(v.boolean()),
+  }),
+  response: v.object({
+    id: v.string(),
+    name: v.string(),
+    email: v.string(),
+  }),
+});
+
+export const createUser = route({
+  method: "POST",
+  path: path`/users`,
+  bodyParams: v.object({
+    name: v.string(),
+    email: v.pipe(v.string(), v.email()),
+  }),
+  response: v.object({
+    id: v.string(),
+    name: v.string(),
+    email: v.string(),
+  }),
+});
+
+// Create client
+const client = createClient({
+  baseUrl: "https://api.example.com",
+  headers: () => ({
+    Authorization: `Bearer ${process.env.API_TOKEN}`,
+  }),
+});
+
+// Type-safe call with neverthrow
+const result = await client.call(getUser, { id: "123", include: ["posts"] });
+
+result.match(
+  (user) => console.log("User:", user.name),
+  (error) => console.error("Error:", error.message),
+);
+```
+
+### Error Handling Patterns
+
+```ts
+// Pattern 1: match at the end
+const user = await client.call(getUser, { id: "123" })
+  .match(
+    (user) => user,  // Success case
+    (error) => {
+      if (error.type === "HttpError" && error.status === 404) {
+        return null;  // User not found
+      }
+      throw error;  // Re-throw unexpected errors
+    }
+  );
+
+// Pattern 2: orElse for defaults
+const user = await client.call(getUser, { id: "123" })
+  .orElse((error) => {
+    if (error.type === "HttpError" && error.status === 404) {
+      return { id: "0", name: "Guest", email: "" };  // Default guest user
+    }
+    throw error;
+  });
+
+// Pattern 3: map for transformations
+const users = await client.call(listUsers, { page: 1 })
+  .map((users) => ({
+    ...users,
+    fetched: new Date().toISOString(),  // Add metadata
+  }));
+
+// Pattern 4: chain for sequential requests
+const created = await client.call(createUser, { name: "Jane" })
+  .andThen((created) =>
+    client.call(getUser, { id: created.id })
+  );
+```
+
+### Chaining Requests
+
+```ts
+// Sequential requests
+const userWithPosts = await client.call(getUser, { id: "123" })
+  .andThen((user) =>
+    client.call(getUserPosts, { userId: user.id })
+      .map((posts) => ({ ...user, posts }))
+  );
+
+// Parallel requests
+const [user, posts] = await ResultAsync.combine([
+  client.call(getUser, { id: "1" }),
+  client.call(getPosts, { userId: "1" }),
+]);
+
+// Retry with mapErr
+const result = await client.call(createUser, { name: "Jane" })
+  .mapErr((error) => {
+    if (error.retryable && attempts < 3) {
+      return retry();  // Retry function
+    }
+    return errAsync(error);
+  });
+```
+
+### Custom Fetcher with Retry
+
+```ts
+const withRetry = (fetcher: Fetcher, maxRetries = 3): Fetcher =>
+  async (url, init) => {
+    let lastError: Error | undefined;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetcher(url, init);
+        if (response.ok || response.status < 500) {
+          return response;
+        }
+        lastError = new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        lastError = error as Error;
+      }
+
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 100));
+    }
+
+    throw lastError;
+  };
+
+const client = createClient({
+  baseUrl: "https://api.example.com",
+  fetcher: withRetry(fetch),
 });
 ```
 
-### package.json
-
-```json
-{
-  "name": "@b3b/cherry",
-  "version": "0.1.0",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./generator": {
-      "types": "./dist/generator/index.d.ts",
-      "import": "./dist/generator/index.js"
-    }
-  },
-  "bin": {
-    "cherry": "./dist/generator/cli.js"
-  },
-  "files": ["dist", "README.md", "LICENSE"],
-  "scripts": {
-    "build": "tsdown",
-    "test": "bun test",
-    "lint": "biome check",
-    "format": "prettier --write ."
-  },
-  "dependencies": {
-    "valibot": "^1.0.0"
-  },
-  "devDependencies": {
-    "@apidevtools/swagger-parser": "^10.1.0",
-    "@types/bun": "latest",
-    "change-case": "^5.4.0",
-    "citty": "^0.1.6",
-    "openapi-types": "^12.1.3",
-    "prettier": "^3.4.0",
-    "tsdown": "^0.2.0",
-    "typescript": "^5.7.0",
-    "yaml": "^2.7.0"
-  },
-  "peerDependencies": {
-    "valibot": ">=1.0.0"
-  }
-}
-```
-
 ---
 
-## Design Decisions
+## Next Steps
 
-### Why String Templates over AST Generation?
+After completing this architecture:
 
-1. **Simplicity** — Generated code is predictable (`defineRoute()` + Valibot schemas)
-2. **Speed** — No AST parsing/manipulation overhead
-3. **Debuggability** — Easy to inspect and modify templates
-4. **Formatting** — Prettier handles all edge cases
-
-### Why Valibot over Zod?
-
-1. **Bundle size** — Valibot is ~10x smaller than Zod
-2. **Tree-shaking** — Valibot functions are independently importable
-3. **Performance** — Slightly faster validation
-4. **Philosophy** — Aligns with Cherry's minimal footprint goal
-
-Zod support can be added later via a plugin system if needed.
-
-### Why Separate Generator Package?
-
-The generator has heavy dependencies (OpenAPI parser, Prettier) that shouldn't bloat the runtime. Users who hand-write routes don't need the generator at all. Keeping them separate enables:
-
-- Lighter runtime bundle
-- Optional generator install
-- Independent versioning
+1. **Build Agent** — For complex multi-file implementation
+2. **Free Coder / Flash Coder** — For straightforward phase implementation
+3. **Frontend Expert** — If building UI components that consume the client
+4. **Documentation** — Update README.md with usage examples
+5. **CI/CD** — Set up automated testing and publishing to JSR/npm
