@@ -11,7 +11,7 @@ Cherry is a lightweight, tree-shakeable API client library that separates **rout
 ### Key Features
 
 - **Type-safe end-to-end** — Path params, query params, body, and response all validated with Valibot
-- **neverthrow integration** — All async operations return `ResultAsync<T, CherryError>`
+- **neverthrow integration** — All *public* async operations return `ResultAsync<T, CherryError>`
 - **Tagged template paths** — `path`/users/${param('id')}` for type-safe URL building
 - **Separated parameter schemas** — `pathParams`, `queryParams`, `bodyParams` for clarity
 - **Tree-shakeable** — Routes are plain imports, not registered globally
@@ -58,6 +58,7 @@ cherry/
 // types.ts
 import type { BaseSchema, InferInput, InferOutput } from "valibot";
 import type { ResultAsync } from "neverthrow";
+import type { CherryError } from "./errors";
 
 /** HTTP methods supported by Cherry */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -349,13 +350,25 @@ export function route<
       );
     }
 
-    // Check each param name exists in schema
+    // Validate path params <-> schema keys (both directions)
     const schemaKeys = getSchemaKeys(config.pathParams);
+
+    // 1) Every param in the template must exist in the schema
     for (const paramName of config.path.paramNames) {
       if (!schemaKeys.includes(paramName)) {
         throw new Error(
           `Path param ":${paramName}" not found in pathParams schema. ` +
           `Available: [${schemaKeys.join(", ")}]`
+        );
+      }
+    }
+
+    // 2) Every key in the schema must be used in the template
+    for (const schemaKey of schemaKeys) {
+      if (!config.path.paramNames.includes(schemaKey)) {
+        throw new Error(
+          `pathParams schema key "${schemaKey}" not present in path template. ` +
+          `Template params: [${config.path.paramNames.join(", ")}]`
         );
       }
     }
@@ -536,6 +549,7 @@ import type {
   Fetcher,
   FetchRequest,
   ClientConfig,
+  Client,
   RouteTree,
   RoutesToClient,
 } from "./types";
@@ -656,7 +670,7 @@ export function createClient<TRoutes extends RouteTree | undefined = undefined>(
     return result.output;
   }
 
-  function forgeRouteMethods(routes: RouteTree): RoutesToClient<RouteTree> {
+  function forgeRouteMethods<T extends RouteTree>(routes: T): RoutesToClient<T> {
     const out: any = {};
 
     for (const [key, value] of Object.entries(routes)) {
@@ -690,10 +704,16 @@ const client = createClient({
   headers: () => ({
     Authorization: `Bearer ${process.env.API_TOKEN}`,
   }),
+  routes: {
+    users: { getUser, createUser },
+  },
 });
 
-// Type-safe call with neverthrow
-const result = await client.call(getUser, { id: "123" });
+// Named method (namespaced from `routes`)
+const result = await client.users.getUser({ id: "123" });
+
+// Generic call also works
+// const result = await client.call(getUser, { id: "123" });
 
 result.match(
   (user) => console.log("User:", user.name),
@@ -1060,36 +1080,30 @@ const [user, posts] = await ResultAsync.combine([
   client.call(getPosts, { userId: "1" }),
 ]);
 
-// Retry with mapErr
-const result = await client.call(createUser, { name: "Jane" })
-  .mapErr((error) => {
-    if (error.retryable && attempts < 3) {
-      return retry();  // Retry function
-    }
-    return errAsync(error);
-  });
+// Retry: implement at the fetcher layer (see below)
+// Note: ResultAsync.mapErr maps error *values*; it doesn't retry requests.
 ```
 
 ### Custom Fetcher with Retry
 
 ```ts
 const withRetry = (fetcher: Fetcher, maxRetries = 3): Fetcher =>
-  async (url, init) => {
-    let lastError: Error | undefined;
+  async (req) => {
+    let lastError: unknown;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const response = await fetcher(url, init);
+        const response = await fetcher(req);
         if (response.ok || response.status < 500) {
           return response;
         }
         lastError = new Error(`HTTP ${response.status}`);
       } catch (error) {
-        lastError = error as Error;
+        lastError = error;
       }
 
       // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 100));
+      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, i) * 100));
     }
 
     throw lastError;
@@ -1097,7 +1111,7 @@ const withRetry = (fetcher: Fetcher, maxRetries = 3): Fetcher =>
 
 const client = createClient({
   baseUrl: "https://api.example.com",
-  fetcher: withRetry(fetch),
+  fetcher: withRetry((req) => fetch(req.url, req.init)),
 });
 ```
 
