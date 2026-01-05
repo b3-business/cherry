@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2026-01-05
+
+### Changed
+
+- README badges now open in new tab
+- GitHub badge shows repo name instead of stars
+
 ## [0.2.4] - 2025-01-05
 
 ### Added

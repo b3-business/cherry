@@ -4,15 +4,16 @@
 
 A tree-shakeable, minimal API client factory. Import only the routes you need — nothing more.
 
-[![npm](https://img.shields.io/npm/v/@b3-business/cherry)](https://www.npmjs.com/package/@b3-business/cherry)
-[![JSR](https://jsr.io/badges/@b3-business/cherry)](https://jsr.io/@b3-business/cherry)
-[![GitHub](https://img.shields.io/github/stars/b3-business/cherry?style=social)](https://github.com/b3-business/cherry)
+<a href="https://www.npmjs.com/package/@b3-business/cherry" target="_blank"><img src="https://img.shields.io/npm/v/@b3-business/cherry" alt="npm"></a>
+<a href="https://jsr.io/@b3-business/cherry" target="_blank"><img src="https://jsr.io/badges/@b3-business/cherry" alt="JSR"></a>
+<a href="https://github.com/b3-business/cherry" target="_blank"><img src="https://img.shields.io/badge/GitHub-b3--business%2Fcherry-blue?logo=github" alt="GitHub"></a>
 
 ---
 
-## Latest Changelog - 0.2.4
+## Latest Changelog - 0.2.5
 
-- Add LICENSE file for JSR publishing
+- README badges now open in new tab
+- GitHub badge shows repo name instead of stars
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 
