@@ -38,24 +38,6 @@ type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type HasRequiredKeys<T> = keyof T extends never ? false : true;
 
-type IsEmptyInput<T> = T extends Record<string, never> 
-  ? true 
-  : keyof T extends never 
-    ? true 
-    : false;
-
-/**
- * Extracts input type from a Valibot schema, handling undefined/never edge cases.
- * 
- * Uses tuple wrapping `[T] extends [X]` to prevent distributive conditional behavior.
- * Without this, `Schema | undefined` would distribute and produce `InferInput<Schema> | {}`
- * which simplifies to `{}` (losing the required properties).
- * 
- * The check order matters:
- * 1. `[T] extends [undefined]` - schema not provided, return empty object
- * 2. `[NonNullable<T>] extends [never]` - T was only undefined, return empty object  
- * 3. `[NonNullable<T>] extends [BaseSchema]` - valid schema, infer its input type
- */
 type InferSchemaInput<T> = 
   [T] extends [undefined] 
     ? {}
@@ -73,18 +55,11 @@ type BuildRouteInputFromProps<
     InferSchemaInput<TQueryParams> &
     InferSchemaInput<TBodyParams>;
 
-/**
- * Infers combined input params from a route by extracting from property types directly.
- * 
- * Uses property-based inference `{ pathParams?: infer TPath }` instead of generic inference
- * because generic inference through CherryRoute<infer P, ...> can lose concrete types
- * when optional properties aren't provided (TypeScript infers the full constraint instead).
- */
 export type InferRouteInput<T> = 
   T extends { pathParams?: infer TPath; queryParams?: infer TQuery; bodyParams?: infer TBody }
     ? HasRequiredKeys<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
       ? Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
-      : Record<string, never>
+      : void
     : never;
 
 /** Infer response output from a route */
@@ -119,17 +94,15 @@ export type ClientConfig<TRoutes extends RouteTree | undefined = undefined> = {
 export type Client<TRoutes extends RouteTree | undefined = undefined> = {
   call: <T extends CherryRoute<any, any, any, any>>(
     route: T,
-    ...args: IsEmptyInput<InferRouteInput<T>> extends true
-      ? [params?: InferRouteInput<T>]
-      : [params: InferRouteInput<T>]
+    ...args: InferRouteInput<T> extends void ? [] : [params: InferRouteInput<T>]
   ) => CherryResult<InferRouteOutput<T>>;
 } & (TRoutes extends RouteTree ? RoutesToClient<TRoutes> : {});
 
 /** Convert a nested route tree into a nested client method tree */
 export type RoutesToClient<TRoutes extends RouteTree> = {
   [K in keyof TRoutes]: TRoutes[K] extends CherryRoute<any, any, any, any>
-    ? IsEmptyInput<InferRouteInput<TRoutes[K]>> extends true
-      ? (params?: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
+    ? InferRouteInput<TRoutes[K]> extends void
+      ? () => CherryResult<InferRouteOutput<TRoutes[K]>>
       : (params: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
     : TRoutes[K] extends RouteTree
       ? RoutesToClient<TRoutes[K]>

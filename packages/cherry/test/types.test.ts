@@ -318,7 +318,7 @@ describe("InferRouteInput", () => {
     }>();
   });
 
-  it("should infer Record<string, never> when no params (prevents extra properties)", () => {
+  it("should infer void when no params", () => {
     type Route = CherryRoute<
       undefined,
       undefined,
@@ -327,7 +327,7 @@ describe("InferRouteInput", () => {
     >;
     type Input = InferRouteInput<Route>;
 
-    expectTypeOf<Input>().toEqualTypeOf<Record<string, never>>();
+    expectTypeOf<Input>().toEqualTypeOf<void>();
   });
 });
 
@@ -479,12 +479,8 @@ describe("RoutesToClient", () => {
     type ClientTree = RoutesToClient<Tree>;
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
-      getUser: (
-        params?: InferRouteInput<CherryRoute<any, any, any, any>>,
-      ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
-      createUser: (
-        params?: InferRouteInput<CherryRoute<any, any, any, any>>,
-      ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+      getUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+      createUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
     }>();
   });
 
@@ -500,12 +496,8 @@ describe("RoutesToClient", () => {
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
       users: {
-        getUser: (
-          params?: InferRouteInput<CherryRoute<any, any, any, any>>,
-        ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
-        createUser: (
-          params?: InferRouteInput<CherryRoute<any, any, any, any>>,
-        ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+        getUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+        createUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
       };
     }>();
   });
@@ -542,7 +534,7 @@ describe("RoutesToClient", () => {
     >();
 
     expectTypeOf<WithoutParamsMethod>().toEqualTypeOf<
-      (params?: Record<string, never>) => CherryResult<{ id: string }>
+      () => CherryResult<{ id: string }>
     >();
   });
 });

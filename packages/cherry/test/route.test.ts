@@ -316,7 +316,7 @@ describe("route() type inference", () => {
     expect(testInput.id).toBe("test");
   });
 
-  it("infers empty object when no params", () => {
+  it("infers void when no params", () => {
     const r = route({
       method: "GET",
       path: path`/health`,
@@ -324,8 +324,7 @@ describe("route() type inference", () => {
     });
 
     type Input = InferRouteInput<typeof r>;
-    const testInput: Input = {};
-    expect(Object.keys(testInput)).toHaveLength(0);
+    expectTypeOf<Input>().toEqualTypeOf<void>();
   });
 
   it("infers correct output type", () => {
