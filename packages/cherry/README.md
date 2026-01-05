@@ -6,6 +6,15 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 [![npm](https://img.shields.io/npm/v/@b3-business/cherry)](https://www.npmjs.com/package/@b3-business/cherry)
 [![JSR](https://jsr.io/badges/@b3-business/cherry)](https://jsr.io/@b3-business/cherry)
+[![GitHub](https://img.shields.io/github/stars/b3-business/cherry?style=social)](https://github.com/b3-business/cherry)
+
+---
+
+## Latest Changelog - 0.1.0
+
+- Initial release
+
+See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
 ---
 
