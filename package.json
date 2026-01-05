@@ -1,4 +1,11 @@
 {
+  "name": "@b3b/cherry",
+  "version": "0.1.0",
+  "description": "A tree-shakeable, minimal API client factory. Import only the routes you need — nothing more.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "typecheck-test": "tsc --noEmit -p tsconfig.test.json"
+  },
   "dependencies": {
     "neverthrow": "^8.2.0",
     "valibot": "^1.2.0"
