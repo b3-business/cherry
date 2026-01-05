@@ -4,3 +4,6 @@ agent/tmp/*
 
 # ignore this tsbuildinfo in whole monorepo, this is a ts compilation cache file
 *.tsbuildinfo
+
+# ignore outputs
+dist/
