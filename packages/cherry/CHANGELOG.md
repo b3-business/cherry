@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2025-01-05
+
+### Added
+
+- LICENSE file for JSR publishing
+
 ## [0.2.3] - 2025-01-05
 
 ### Added

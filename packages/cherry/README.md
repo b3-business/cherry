@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.3
+## Latest Changelog - 0.2.4
 
-- Add JSR (jsr.io) publishing
+- Add LICENSE file for JSR publishing
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 
@@ -222,6 +222,31 @@ See [ARCHITECTURE.md](./agent/ARCHITECTURE.md) for generator implementation deta
 - **Language:** TypeScript (strict)
 - **Formatting:** Prettier (100 char width)
 - **Bundling:** tsdown
+
+---
+
+## Dev Info
+
+### Publishing
+
+Publishing to npm and JSR uses **trusted OIDC publishing** via GitHub Actions - no tokens required. Manual `npm publish` or `jsr publish` will not work locally.
+
+To release a new version:
+1. Update version in `package.json` and `jsr.json`
+2. Update `CHANGELOG.md` and README (Latest Changelog section)
+3. Commit, tag, and push:
+   ```bash
+   git add -A && git commit -m "release: X.Y.Z" && git tag X.Y.Z && git push && git push --tags
+   ```
+
+The GitHub Actions workflow will automatically publish to both npm and JSR.
+
+### Dry-run Scripts
+
+```bash
+npm run dry-npm   # Verify npm package contents
+npm run dry-jsr   # Verify JSR package contents
+```
 
 ---
 
