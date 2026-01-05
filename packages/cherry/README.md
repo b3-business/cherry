@@ -139,20 +139,163 @@ const zones = await cf.call(listZones, { account_id: "abc" });
 
 ## Features
 
-### Dynamic Path Parameters
+### Path Parameters
+
+Use `path` tagged template with `param()` markers for dynamic URL segments:
 
 ```ts
-export const getZone = route({
+import { route, path, param } from "@b3b/cherry";
+
+export const getUser = route({
   method: "GET",
-  path: path`/zones/${param("zone_id")}`,
-  pathParams: v.object({ zone_id: v.string() }),
-  response: v.object({ /* ... */ }),
+  path: path`/users/${param("id")}`,
+  pathParams: v.object({ id: v.number() }),
+  response: UserSchema,
 });
+
+// Multiple params
+export const getComment = route({
+  method: "GET",
+  path: path`/posts/${param("postId")}/comments/${param("commentId")}`,
+  pathParams: v.object({ postId: v.number(), commentId: v.number() }),
+  response: CommentSchema,
+});
+```
+
+### Optional Path Parameters
+
+Use `optional()` for optional URL segments:
+
+```ts
+import { route, path, optional } from "@b3b/cherry";
+
+export const getApiResource = route({
+  method: "GET",
+  path: path`/api${optional("version")}/resource`,
+  pathParams: v.object({ version: v.optional(v.string()) }),
+  response: ResourceSchema,
+});
+```
+
+### Query Parameters
+
+Define query string parameters with their own schema:
+
+```ts
+export const listUsers = route({
+  method: "GET",
+  path: path`/users`,
+  queryParams: v.object({
+    page: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    search: v.optional(v.string()),
+  }),
+  response: v.array(UserSchema),
+});
+
+// Usage: client.listUsers({ page: 1, limit: 10, search: "john" })
+// → GET /users?page=1&limit=10&search=john
+```
+
+### Query Array Formats
+
+Configure how arrays are serialized in query strings:
+
+```ts
+export const filterItems = route({
+  method: "GET",
+  path: path`/items`,
+  queryParams: v.object({ tags: v.array(v.string()) }),
+  queryParamOptions: { arrayFormat: "comma" }, // or "repeat" | "brackets" | "json"
+  response: v.array(ItemSchema),
+});
+
+// arrayFormat examples for tags=["a","b"]:
+// "repeat"   → ?tags=a&tags=b        (default)
+// "comma"    → ?tags=a,b
+// "brackets" → ?tags[]=a&tags[]=b
+// "json"     → ?tags=["a","b"]
+```
+
+### Body Parameters
+
+Define request body schema for POST/PUT/PATCH:
+
+```ts
+export const createPost = route({
+  method: "POST",
+  path: path`/posts`,
+  bodyParams: v.object({
+    title: v.string(),
+    body: v.string(),
+    userId: v.number(),
+  }),
+  response: PostSchema,
+});
+```
+
+### Namespaced Routes
+
+Group related routes into nested objects for better organization:
+
+```ts
+// routes.ts
+export const posts = {
+  list: route({ method: "GET", path: path`/posts`, response: v.array(PostSchema) }),
+  get: route({ method: "GET", path: path`/posts/${param("id")}`, pathParams: v.object({ id: v.number() }), response: PostSchema }),
+  create: route({ method: "POST", path: path`/posts`, bodyParams: PostInputSchema, response: PostSchema }),
+};
+
+export const users = {
+  list: route({ method: "GET", path: path`/users`, response: v.array(UserSchema) }),
+  get: route({ method: "GET", path: path`/users/${param("id")}`, pathParams: v.object({ id: v.number() }), response: UserSchema }),
+};
+
+// client.ts
+const api = createCherryClient({
+  baseUrl: "https://api.example.com",
+  routes: { posts, users },
+});
+
+// Usage with namespacing
+await api.posts.list({});
+await api.posts.get({ id: 1 });
+await api.users.get({ id: 42 });
+```
+
+### Dynamic Headers
+
+Provide headers dynamically (supports async for token refresh):
+
+```ts
+const client = createCherryClient({
+  baseUrl: "https://api.example.com",
+  headers: async () => ({
+    Authorization: `Bearer ${await getAccessToken()}`,
+    "X-Request-ID": crypto.randomUUID(),
+  }),
+  routes: { /* ... */ },
+});
+```
+
+### Generic `call()` Method
+
+Call any route without registering it in the client:
+
+```ts
+import { createCherryClient } from "@b3b/cherry";
+import { getUser, listPosts } from "./routes";
+
+const client = createCherryClient({ baseUrl: "https://api.example.com" });
+
+// Works with any route - useful for one-off calls or dynamic route selection
+const user = await client.call(getUser, { id: 1 });
+const posts = await client.call(listPosts, {});
 ```
 
 ### Custom Fetcher
 
-Replace the underlying fetch logic for logging, retries, auth refresh, etc.
+Replace the underlying fetch logic for logging, retries, auth refresh, etc.:
 
 ```ts
 createCherryClient({
@@ -193,6 +336,101 @@ const baseFetcher: Fetcher = (req) => fetch(req.url, req.init);
 createCherryClient({
   baseUrl: "...",
   fetcher: withLogging(withRetry(baseFetcher)),
+});
+```
+
+### Railway-Oriented Error Handling
+
+All client methods return `ResultAsync<T, CherryError>` from [neverthrow](https://github.com/supermacro/neverthrow):
+
+```ts
+const result = await client.posts.get({ id: 1 });
+
+// Pattern 1: Check and unwrap
+if (result.isOk()) {
+  console.log(result.value); // typed as Post
+} else {
+  console.error(result.error); // typed as CherryError
+}
+
+// Pattern 2: Map/chain operations
+const title = await client.posts.get({ id: 1 })
+  .map(post => post.title)
+  .unwrapOr("Unknown");
+
+// Pattern 3: Match both cases
+result.match(
+  (post) => console.log(`Got: ${post.title}`),
+  (error) => console.error(`Failed: ${error.message}`),
+);
+```
+
+### Typed Error Hierarchy
+
+All errors extend `CherryError` with `type` and `retryable` properties:
+
+```ts
+import {
+  CherryError,
+  HttpError,        // HTTP 4xx/5xx (retryable for 5xx and 429)
+  ValidationError,  // Valibot schema validation failed
+  NetworkError,     // fetch() threw (always retryable)
+  SerializationError, // JSON serialization failed
+  UnknownCherryError, // Catch-all
+  isCherryError,
+} from "@b3b/cherry";
+
+const result = await client.posts.get({ id: 1 });
+
+if (result.isErr()) {
+  const err = result.error;
+  
+  if (err instanceof HttpError) {
+    console.log(err.status, err.statusText, err.body);
+    if (err.retryable) { /* retry logic */ }
+  }
+  
+  if (err instanceof ValidationError) {
+    console.log(err.target); // "request" or "response"
+    console.log(err.issues); // Valibot issues array
+  }
+}
+```
+
+### Type Inference Utilities
+
+Extract input/output types from route definitions:
+
+```ts
+import type { InferRouteInput, InferRouteOutput } from "@b3b/cherry";
+import { getUser } from "./routes";
+
+type GetUserInput = InferRouteInput<typeof getUser>;
+// { id: number }
+
+type GetUserOutput = InferRouteOutput<typeof getUser>;
+// { id: number; name: string; email: string; ... }
+```
+
+### Route Validation at Definition Time
+
+Routes validate configuration immediately — catch mistakes during development:
+
+```ts
+// ❌ Throws: "Route has path params [id] but no pathParams schema"
+const bad = route({
+  method: "GET",
+  path: path`/users/${param("id")}`,
+  response: UserSchema,
+  // Missing pathParams!
+});
+
+// ❌ Throws: "Path param ':userId' not found in pathParams schema"
+const mismatch = route({
+  method: "GET",
+  path: path`/users/${param("userId")}`,
+  pathParams: v.object({ id: v.number() }), // Wrong key!
+  response: UserSchema,
 });
 ```
 
