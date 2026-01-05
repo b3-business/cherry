@@ -10,11 +10,12 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.7
+## Latest Changelog - 0.3.0
 
-- README: Reconcile documentation with actual API (`createCherryClient`, `route`, `path` tagged template)
-- README: Remove unimplemented OpenAPI generator section
-- Example: JSONPlaceholder now uses sub-namespaced routes (`posts.list`, `users.get`)
+- Fix: Simplify type inference for void params using the same technique as event-bus-core
+- Fix: Allow omitting empty object for calls that don't require params (e.g., `client.listPosts()` instead of `client.listPosts({})`)
+- Fix: Autocomplete for routes now works correctly in IDE
+- Add comprehensive JSDoc comments to types.ts
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 

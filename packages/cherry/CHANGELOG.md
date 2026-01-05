@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-01-05
+
+### Fixed
+
+- Simplify type inference for void params using the same technique as event-bus-core
+- Allow omitting empty object for calls that don't require params (e.g., `client.listPosts()` instead of `client.listPosts({})`)
+- Fix autocomplete for routes in IDE
+
+### Changed
+
+- Add comprehensive JSDoc comments to types.ts
+
 ## [0.2.7] - 2026-01-05
 
 ### Changed
