@@ -268,8 +268,9 @@ The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
 - Node 24+ for npm 11.5.1+ (required for OIDC)
 - Package linked to GitHub repo on jsr.io (Settings → Link GitHub Repository)
 
-## NOTES
+## AGENT NOTES
 
+- **Web search fallback**: If Exa web search fails, use Playwright MCP to navigate and scrape documentation directly
 - `playground/` is empty - use for API experiments
 - README shows final API design, not current state
 - ARCHITECTURE.md is the source of truth for implementation phases
