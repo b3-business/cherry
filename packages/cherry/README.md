@@ -12,7 +12,7 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ## Latest Changelog - 0.2.0
 
-- Test GitHub Actions OIDC publishing to npm
+- GitHub Actions workflow for trusted OIDC publishing to npm (no tokens required)
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
