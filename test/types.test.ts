@@ -19,6 +19,11 @@ import type {
   RoutesToClient,
 } from "../src/types";
 
+/**
+ * HttpMethod: Simple string literal union for REST verbs.
+ * Example: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+ * This constrains route.method to valid HTTP methods only.
+ */
 describe("HttpMethod", () => {
   it("should be a union of allowed methods", () => {
     expectTypeOf<HttpMethod>().toEqualTypeOf<
@@ -36,6 +41,12 @@ describe("HttpMethod", () => {
   });
 });
 
+/**
+ * PathTemplate: Holds parsed URL template + extracted param names.
+ * Example: { template: "/users/:id", paramNames: ["id"] }
+ * The paramNames array enables runtime path interpolation:
+ *   "/users/:id" + {id: "123"} -> "/users/123"
+ */
 describe("PathTemplate", () => {
   it("should have correct structure", () => {
     const path: PathTemplate = {
@@ -56,6 +67,13 @@ describe("PathTemplate", () => {
   });
 });
 
+/**
+ * QueryParamOptions: Controls how arrays serialize in query strings.
+ * Example: tags=["a","b"] with arrayFormat:
+ *   "repeat"   -> ?tags=a&tags=b
+ *   "comma"    -> ?tags=a,b
+ *   "brackets" -> ?tags[]=a&tags[]=b
+ */
 describe("QueryParamOptions", () => {
   it("should accept array format options", () => {
     const options1: QueryParamOptions = {
@@ -90,6 +108,13 @@ describe("QueryParamOptions", () => {
   });
 });
 
+/**
+ * CherryRoute<TPath, TQuery, TBody, TResponse>: Core route definition.
+ * Four generic slots for Valibot schemas (all optional except response).
+ * Example: CherryRoute<PathSchema, QuerySchema, BodySchema, ResponseSchema>
+ * Each schema slot can be `undefined` for routes that don't need that param type.
+ * The client uses these generics to infer input/output types at compile time.
+ */
 describe("CherryRoute", () => {
   const PathSchema = v.object({
     id: v.string(),
@@ -187,6 +212,13 @@ describe("CherryRoute", () => {
   });
 });
 
+/**
+ * InferRouteInput<T>: Extracts & merges all input params from a route.
+ * Uses conditional types: if schema is defined, infer its input type; else {}.
+ * Example: Route with PathSchema{id} + QuerySchema{limit?} + BodySchema{name}
+ *   -> InferRouteInput = { id: string; limit?: number; name: string }
+ * The Prettify wrapper flattens intersections for readable IDE tooltips.
+ */
 describe("InferRouteInput", () => {
   const PathSchema = v.object({
     id: v.string(),
@@ -297,6 +329,13 @@ describe("InferRouteInput", () => {
   });
 });
 
+/**
+ * InferRouteOutput<T>: Extracts response type from route's response schema.
+ * Uses Valibot's InferOutput to get the validated output type.
+ * Example: ResponseSchema = v.object({id: v.string(), name: v.string()})
+ *   -> InferRouteOutput = { id: string; name: string }
+ * Handles any Valibot schema including arrays, unions, transforms, etc.
+ */
 describe("InferRouteOutput", () => {
   const ResponseSchema = v.object({
     id: v.string(),
@@ -336,6 +375,13 @@ describe("InferRouteOutput", () => {
   });
 });
 
+/**
+ * CherryResult<T>: Alias for ResultAsync<T, CherryError> from neverthrow.
+ * All client methods return this for type-safe error handling.
+ * Example: CherryResult<User> = ResultAsync<User, CherryError>
+ * Usage: result.match({ ok: (user) => ..., err: (error) => ... })
+ * Enables Railway-Oriented Programming without try/catch.
+ */
 describe("CherryResult", () => {
   it("should be a ResultAsync", () => {
     type Result = CherryResult<string>;
@@ -355,6 +401,12 @@ describe("CherryResult", () => {
   });
 });
 
+/**
+ * Fetcher: Function signature for HTTP transport layer.
+ * Type: (req: FetchRequest) => Promise<Response>
+ * Example custom fetcher: async (req) => { log(req); return fetch(req.url, req.init); }
+ * Allows middleware composition: withRetry(withLogging(baseFetcher))
+ */
 describe("Fetcher", () => {
   it("should accept FetchRequest and return Promise<Response>", () => {
     type FetcherType = (req: FetchRequest) => Promise<Response>;
@@ -362,6 +414,13 @@ describe("Fetcher", () => {
   });
 });
 
+/**
+ * RouteTree: Recursive type for organizing routes in namespaced hierarchies.
+ * Type: { [key: string]: CherryRoute | RouteTree }
+ * Example flat:   { getUser: Route, createUser: Route }
+ * Example nested: { users: { get: Route, create: Route }, posts: { list: Route } }
+ * Enables client.users.get() vs client.getUser() access patterns.
+ */
 describe("RouteTree", () => {
   const UserRoute: CherryRoute<any, any, any, any> = {} as any;
 
@@ -399,6 +458,13 @@ describe("RouteTree", () => {
   });
 });
 
+/**
+ * RoutesToClient<T>: Mapped type transforming RouteTree -> callable methods.
+ * For each route: Route -> (params: InferRouteInput) => CherryResult<InferRouteOutput>
+ * For each subtree: Recursively applies RoutesToClient
+ * Example: { users: { get: Route } } -> { users: { get: (p) => Result } }
+ * This is the core type magic enabling typed client.users.get({id: "1"}).
+ */
 describe("RoutesToClient", () => {
   const UserRoute: CherryRoute<any, any, any, any> = {} as any;
 
@@ -443,6 +509,14 @@ describe("RoutesToClient", () => {
   });
 });
 
+/**
+ * Client<TRoutes>: Base client + dynamically added route methods.
+ * Type: { call: <T>(route, params) => Result } & RoutesToClient<TRoutes>
+ * Example: Client<{users: {get: Route}}> has both:
+ *   - client.call(anyRoute, params) for ad-hoc routes
+ *   - client.users.get(params) for registered routes
+ * The conditional intersection adds methods only when routes are provided.
+ */
 describe("Client", () => {
   it("should have call method", () => {
     const client: Client<undefined> = {} as any;
@@ -463,6 +537,13 @@ describe("Client", () => {
   });
 });
 
+/**
+ * ClientConfig<TRoutes>: Configuration object for createClient().
+ * Required: baseUrl (string)
+ * Optional: headers (sync/async fn), fetcher (custom transport), routes (RouteTree)
+ * Example: { baseUrl: "https://api.com", headers: async () => ({Auth: token}), routes }
+ * The TRoutes generic flows through to Client<TRoutes> for type inference.
+ */
 describe("ClientConfig", () => {
   it("should accept basic config", () => {
     const config: ClientConfig = {
