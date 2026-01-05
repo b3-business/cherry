@@ -1,10 +1,17 @@
 {
   "name": "@b3b/cherry-monorepo",
   "private": true,
-  "workspaces": [
-    "packages/cherry",
-    "examples/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "packages/cherry",
+      "examples/*"
+    ],
+    "catalogs": {
+      "prod-npm-preview": {
+        "@b3-business/cherry": "0.2.4"
+      }
+    }
+  },
   "scripts": {
     "check": "bun run --filter '*' check",
     "test": "bun run --filter '*' test",
