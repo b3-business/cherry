@@ -38,6 +38,12 @@ type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type HasRequiredKeys<T> = keyof T extends never ? false : true;
 
+type IsEmptyInput<T> = T extends Record<string, never> 
+  ? true 
+  : keyof T extends never 
+    ? true 
+    : false;
+
 /**
  * Extracts input type from a Valibot schema, handling undefined/never edge cases.
  * 
@@ -113,14 +119,18 @@ export type ClientConfig<TRoutes extends RouteTree | undefined = undefined> = {
 export type Client<TRoutes extends RouteTree | undefined = undefined> = {
   call: <T extends CherryRoute<any, any, any, any>>(
     route: T,
-    params: InferRouteInput<T>,
+    ...args: IsEmptyInput<InferRouteInput<T>> extends true
+      ? [params?: InferRouteInput<T>]
+      : [params: InferRouteInput<T>]
   ) => CherryResult<InferRouteOutput<T>>;
 } & (TRoutes extends RouteTree ? RoutesToClient<TRoutes> : {});
 
 /** Convert a nested route tree into a nested client method tree */
 export type RoutesToClient<TRoutes extends RouteTree> = {
   [K in keyof TRoutes]: TRoutes[K] extends CherryRoute<any, any, any, any>
-    ? (params: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
+    ? IsEmptyInput<InferRouteInput<TRoutes[K]>> extends true
+      ? (params?: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
+      : (params: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
     : TRoutes[K] extends RouteTree
       ? RoutesToClient<TRoutes[K]>
       : never;

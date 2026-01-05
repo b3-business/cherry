@@ -40,7 +40,7 @@ describe('JSONPlaceholder Post Roundtrip', () => {
 	});
 
 	it('lists all posts', async () => {
-		const result = await jsonPlaceholder.posts.list({});
+		const result = await jsonPlaceholder.posts.list();
 		expect(result.isOk()).toBe(true);
 		if (!result.isOk()) return;
 
@@ -62,7 +62,7 @@ describe('JSONPlaceholder Post Roundtrip', () => {
 
 describe('JSONPlaceholder User Routes', () => {
 	it('lists all users', async () => {
-		const result = await jsonPlaceholder.users.list({});
+		const result = await jsonPlaceholder.users.list();
 		expect(result.isOk()).toBe(true);
 		if (!result.isOk()) return;
 

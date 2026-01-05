@@ -480,10 +480,10 @@ describe("RoutesToClient", () => {
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
       getUser: (
-        params: InferRouteInput<CherryRoute<any, any, any, any>>,
+        params?: InferRouteInput<CherryRoute<any, any, any, any>>,
       ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
       createUser: (
-        params: InferRouteInput<CherryRoute<any, any, any, any>>,
+        params?: InferRouteInput<CherryRoute<any, any, any, any>>,
       ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
     }>();
   });
@@ -501,13 +501,49 @@ describe("RoutesToClient", () => {
     expectTypeOf<ClientTree>().toEqualTypeOf<{
       users: {
         getUser: (
-          params: InferRouteInput<CherryRoute<any, any, any, any>>,
+          params?: InferRouteInput<CherryRoute<any, any, any, any>>,
         ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
         createUser: (
-          params: InferRouteInput<CherryRoute<any, any, any, any>>,
+          params?: InferRouteInput<CherryRoute<any, any, any, any>>,
         ) => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
       };
     }>();
+  });
+
+  it("should make params optional when route has no input params", () => {
+    const ResponseSchema = v.object({ id: v.string() });
+    const PathSchema = v.object({ id: v.string() });
+
+    type RouteWithParams = CherryRoute<
+      typeof PathSchema,
+      undefined,
+      undefined,
+      typeof ResponseSchema
+    >;
+    type RouteWithoutParams = CherryRoute<
+      undefined,
+      undefined,
+      undefined,
+      typeof ResponseSchema
+    >;
+
+    type Tree = {
+      withParams: RouteWithParams;
+      withoutParams: RouteWithoutParams;
+    };
+
+    type ClientTree = RoutesToClient<Tree>;
+
+    type WithParamsMethod = ClientTree["withParams"];
+    type WithoutParamsMethod = ClientTree["withoutParams"];
+
+    expectTypeOf<WithParamsMethod>().toEqualTypeOf<
+      (params: { id: string }) => CherryResult<{ id: string }>
+    >();
+
+    expectTypeOf<WithoutParamsMethod>().toEqualTypeOf<
+      (params?: Record<string, never>) => CherryResult<{ id: string }>
+    >();
   });
 });
 
