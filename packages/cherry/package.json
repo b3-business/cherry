@@ -22,7 +22,10 @@
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p .",
     "typecheck-test": "tsc --noEmit -p tsconfig.test.json",
-    "test": "bun test"
+    "test": "bun test",
+    "prepublishOnly": "npm run check && npm run test && npm run build",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:npm": "npm publish --access public"
   },
   "dependencies": {
     "neverthrow": "^8.2.0",
