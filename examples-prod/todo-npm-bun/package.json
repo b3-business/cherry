@@ -9,7 +9,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@b3-business/cherry": "^0.2.4",
+    "@b3-business/cherry": "^0.3.2",
     "neverthrow": "^8.2.0",
     "valibot": "^1.2.0"
   },

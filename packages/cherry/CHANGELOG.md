@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2026-01-05
+
+### Fixed
+
+- Ship TypeScript source files in npm package to fix module resolution (exports point to `./src/index.ts`)
+
 ## [0.3.1] - 2026-01-05
 
 ### Fixed

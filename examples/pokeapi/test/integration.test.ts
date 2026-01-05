@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { pokeApi } from "../src/client";
-import { getPokemon, getType, getMove } from "../src/routes";
+import { getPokemon } from "../src/routes";
 
 describe("PokeAPI Pokemon Routes", () => {
   it("lists pokemon with pagination", async () => {

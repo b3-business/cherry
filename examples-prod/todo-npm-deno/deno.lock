@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@std/assert@*": "1.0.14",
     "jsr:@std/internal@^1.0.10": "1.0.12",
-    "npm:@b3-business/cherry@~0.2.4": "0.2.4",
+    "npm:@b3-business/cherry@~0.3.1": "0.3.1",
     "npm:neverthrow@^8.2.0": "8.2.0",
     "npm:valibot@^1.2.0": "1.2.0"
   },
@@ -19,8 +19,8 @@
     }
   },
   "npm": {
-    "@b3-business/cherry@0.2.4": {
-      "integrity": "sha512-45sFTkHB2nkLrozTSZXHqSKDv2PSIuUkm6pyvNk45aWNAlslocZpTl7zoVsSsaboXBIJSFCl+LkmRgP3s/JRMw==",
+    "@b3-business/cherry@0.3.1": {
+      "integrity": "sha512-doNdfFfo2kSWRTPxocLsLQlpsHLJ9pzjjJYCSHyqkJlgHM1z2LuUJ+R8Fm9Tj59usswrxinq+1dc9sYagj9QXA==",
       "dependencies": [
         "neverthrow",
         "valibot"
@@ -43,7 +43,7 @@
   },
   "workspace": {
     "dependencies": [
-      "npm:@b3-business/cherry@~0.2.4",
+      "npm:@b3-business/cherry@~0.3.1",
       "npm:neverthrow@^8.2.0",
       "npm:valibot@^1.2.0"
     ]

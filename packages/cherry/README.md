@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.3.1
+## Latest Changelog - 0.3.2
 
-- Fix: Add `@types/bun` to monorepo root for editor TypeScript support
+- Fix: Ship TypeScript source files in npm package to fix module resolution
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 

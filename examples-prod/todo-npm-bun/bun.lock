@@ -5,7 +5,7 @@
     "": {
       "name": "@b3b/cherry-example-todo-npm-bun",
       "dependencies": {
-        "@b3-business/cherry": "^0.2.4",
+        "@b3-business/cherry": "^0.3.1",
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
       },
@@ -16,7 +16,7 @@
     },
   },
   "packages": {
-    "@b3-business/cherry": ["@b3-business/cherry@0.2.4", "", { "dependencies": { "neverthrow": "^8.2.0", "valibot": "^1.2.0" } }, "sha512-45sFTkHB2nkLrozTSZXHqSKDv2PSIuUkm6pyvNk45aWNAlslocZpTl7zoVsSsaboXBIJSFCl+LkmRgP3s/JRMw=="],
+    "@b3-business/cherry": ["@b3-business/cherry@0.3.1", "", { "dependencies": { "neverthrow": "^8.2.0", "valibot": "^1.2.0" } }, "sha512-doNdfFfo2kSWRTPxocLsLQlpsHLJ9pzjjJYCSHyqkJlgHM1z2LuUJ+R8Fm9Tj59usswrxinq+1dc9sYagj9QXA=="],
 
     "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.54.0", "", { "os": "linux", "cpu": "x64" }, "sha512-WGt5J8Ij/rvyqpFexxk3ffKqqbLf9AqrTBbWDk7ApGUzaIs6V+s2s84kAxklFwmMF/vBNGrVdYgbblCOFFezMQ=="],
 

@@ -5,7 +5,7 @@
     "": {
       "name": "@b3b/cherry-example-todo-jsr-bun",
       "dependencies": {
-        "@b3-business/cherry": "npm:@jsr/b3-business__cherry@^0.2.4",
+        "@b3-business/cherry": "npm:@jsr/b3-business__cherry@^0.3.1",
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
       },
@@ -16,7 +16,7 @@
     },
   },
   "packages": {
-    "@b3-business/cherry": ["@jsr/b3-business__cherry@0.2.4", "https://npm.jsr.io/~/11/@jsr/b3-business__cherry/0.2.4.tgz", { "dependencies": { "neverthrow": "^8.2.0", "valibot": "^1.2.0" } }, "sha512-ZbFrDzB3lSYz1CX635jXzcjQsnLF2cty1opg2l2vjr3QtxFbp3z6EdOStYkES2oX+aa6dlLdmrOh2eCCL3dhpw=="],
+    "@b3-business/cherry": ["@jsr/b3-business__cherry@0.3.1", "https://npm.jsr.io/~/11/@jsr/b3-business__cherry/0.3.1.tgz", { "dependencies": { "neverthrow": "^8.2.0", "valibot": "^1.2.0" } }, "sha512-3U+fbMHVXOLgepK+YIHuWGXFx2s5yAP4jfFH639ALDfgvQmuxKHi/Ekjz8owJ3/2vKwOzFhZd+Mi7x+ETCVnIg=="],
 
     "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.54.0", "", { "os": "linux", "cpu": "x64" }, "sha512-WGt5J8Ij/rvyqpFexxk3ffKqqbLf9AqrTBbWDk7ApGUzaIs6V+s2s84kAxklFwmMF/vBNGrVdYgbblCOFFezMQ=="],
 

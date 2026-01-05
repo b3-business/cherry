@@ -39,7 +39,7 @@ Deno.test("JSONPlaceholder Post Roundtrip - creates, retrieves, updates, and del
 });
 
 Deno.test("JSONPlaceholder Post Roundtrip - lists all posts", async () => {
-  const result = await jsonPlaceholder.listPosts({});
+  const result = await jsonPlaceholder.listPosts();
   assertEquals(result.isOk(), true);
   if (!result.isOk()) return;
 
@@ -59,7 +59,7 @@ Deno.test("JSONPlaceholder Post Roundtrip - gets comments for a post", async () 
 });
 
 Deno.test("JSONPlaceholder User Routes - lists all users", async () => {
-  const result = await jsonPlaceholder.listUsers({});
+  const result = await jsonPlaceholder.listUsers();
   assertEquals(result.isOk(), true);
   if (!result.isOk()) return;
 
