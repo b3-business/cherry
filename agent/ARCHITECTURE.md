@@ -1117,6 +1117,78 @@ const client = createClient({
 
 ---
 
+## 13. Production Examples (examples-prod/)
+
+Self-sufficient examples testing the published cherry package across different registries and runtimes.
+
+### Test Matrix
+
+| Source \ Runner | npm | bun | deno |
+|-----------------|-----|-----|------|
+| **npm** | `todo-npm-npm` | `todo-npm-bun` | `todo-npm-deno` |
+| **jsr** | `todo-jsr-npm` | `todo-jsr-bun` | `todo-jsr-deno` |
+
+### Structure
+
+```
+examples-prod/
+├── todo-npm-npm/       # cherry from npm, run with npm
+├── todo-npm-bun/       # cherry from npm, run with bun
+├── todo-npm-deno/      # cherry from npm, run with deno (npm: specifier)
+├── todo-jsr-npm/       # cherry from jsr, run with npm (@jsr scope)
+├── todo-jsr-bun/       # cherry from jsr, run with bun (@jsr scope)
+└── todo-jsr-deno/      # cherry from jsr, run with deno (native jsr:)
+```
+
+### Key Differences by Runtime
+
+**npm/bun (Node-style)**:
+- `package.json` with dependencies
+- `tsconfig.json` for TypeScript
+- Tests use `bun:test`
+
+**deno**:
+- `deno.json` with import map
+- No `package.json` needed
+- Tests use `Deno.test` + `jsr:@std/assert`
+- File extensions required in imports (`.ts`)
+
+### Key Differences by Source
+
+**npm registry**:
+- Direct version: `"@b3-business/cherry": "^0.2.4"`
+- Deno uses: `"npm:@b3-business/cherry@^0.2.4"`
+
+**jsr registry**:
+- npm/bun use alias: `"@b3-business/cherry": "npm:@jsr/b3-business__cherry@^0.2.4"`
+- Requires `.npmrc`: `@jsr:registry=https://npm.jsr.io`
+- Deno uses native: `"jsr:@b3-business/cherry@^0.2.4"`
+
+### Running Tests
+
+```bash
+# npm examples
+cd examples-prod/todo-npm-npm && npm install && npm test
+cd examples-prod/todo-jsr-npm && npm install && npm test
+
+# bun examples  
+cd examples-prod/todo-npm-bun && bun install && bun test
+cd examples-prod/todo-jsr-bun && bun install && bun test
+
+# deno examples
+cd examples-prod/todo-npm-deno && deno task test
+cd examples-prod/todo-jsr-deno && deno task test
+```
+
+### Notes
+
+- These examples are **NOT** part of the bun workspace (self-sufficient)
+- Each example tests the **published** package, not the local source
+- Update version numbers in each example when releasing new versions
+- JSR examples require `.npmrc` for npm/bun to resolve `@jsr` scope
+
+---
+
 ## Next Steps
 
 After completing this architecture:
