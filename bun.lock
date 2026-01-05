@@ -3,6 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
+      "name": "@b3b/cherry-monorepo",
       "devDependencies": {
         "typescript": "^5.9.3",
       },
@@ -11,7 +12,7 @@
       "name": "@b3b/cherry-example-jsonplaceholder",
       "version": "0.1.0",
       "dependencies": {
-        "@b3b/cherry": "workspace:*",
+        "@b3-business/cherry": "workspace:*",
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
       },
@@ -25,7 +26,7 @@
       "name": "@b3b/cherry-example-pokeapi",
       "version": "0.1.0",
       "dependencies": {
-        "@b3b/cherry": "workspace:*",
+        "@b3-business/cherry": "workspace:*",
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
       },
@@ -36,8 +37,8 @@
       },
     },
     "packages/cherry": {
-      "name": "@b3b/cherry",
-      "version": "0.1.0",
+      "name": "@b3-business/cherry",
+      "version": "0.2.0",
       "dependencies": {
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
@@ -53,7 +54,7 @@
     },
   },
   "packages": {
-    "@b3b/cherry": ["@b3b/cherry@workspace:packages/cherry"],
+    "@b3-business/cherry": ["@b3-business/cherry@workspace:packages/cherry"],
 
     "@b3b/cherry-example-jsonplaceholder": ["@b3b/cherry-example-jsonplaceholder@workspace:examples/jsonplaceholder"],
 

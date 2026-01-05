@@ -148,7 +148,7 @@ mkdir -p examples/{api-name}/src examples/{api-name}/test
     "test": "bun test"
   },
   "dependencies": {
-    "@b3b/cherry": "workspace:*",
+    "@b3-business/cherry": "workspace:*",
     "neverthrow": "^8.2.0",
     "valibot": "^1.2.0"
   },
