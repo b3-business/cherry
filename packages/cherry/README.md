@@ -14,7 +14,7 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 - Fix: Add repository field for npm provenance verification
 
-See [CHANGELOG.md](./CHANGELOG.md) for full history.
+See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 
 ---
 
