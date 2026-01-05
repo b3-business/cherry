@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2026-01-05
+
+### Fixed
+
+- Fix npm/JSR badges to update on new versions (rollback HTML to markdown)
+- GitHub badge shows repo name instead of stars
+
 ## [0.2.5] - 2026-01-05
 
 ### Changed
 
-- README badges now open in new tab
+- README badges now open in new tab (reverted in 0.2.6)
 - GitHub badge shows repo name instead of stars
 
 ## [0.2.4] - 2025-01-05
