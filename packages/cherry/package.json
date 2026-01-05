@@ -1,6 +1,6 @@
 {
   "name": "@b3-business/cherry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A tree-shakeable, minimal API client factory. Import only the routes you need — nothing more.",
   "type": "module",
   "main": "./dist/index.js",

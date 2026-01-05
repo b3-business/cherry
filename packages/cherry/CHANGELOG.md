@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-01-05
+
+### Added
+
+- GitHub Actions workflow for OIDC publishing to npm with provenance
+
 ## [0.1.0] - 2025-01-05
 
 ### Added

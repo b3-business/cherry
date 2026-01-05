@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.1.0
+## Latest Changelog - 0.2.0
 
-- Initial release
+- Test GitHub Actions OIDC publishing to npm
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
