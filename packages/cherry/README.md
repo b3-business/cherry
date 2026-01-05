@@ -10,12 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.3.0
+## Latest Changelog - 0.3.1
 
-- Fix: Simplify type inference for void params using the same technique as event-bus-core
-- Fix: Allow omitting empty object for calls that don't require params (e.g., `client.listPosts()` instead of `client.listPosts({})`)
-- Fix: Autocomplete for routes now works correctly in IDE
-- Add comprehensive JSDoc comments to types.ts
+- Fix: Add `@types/bun` to monorepo root for editor TypeScript support
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 

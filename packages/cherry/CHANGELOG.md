@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-01-05
+
+### Fixed
+
+- Add `@types/bun` to monorepo root for editor TypeScript support
+
 ## [0.3.0] - 2026-01-05
 
 ### Fixed
