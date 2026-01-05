@@ -54,7 +54,7 @@ export function serializeQueryParams(
   return searchParams.toString();
 }
 
-export function createClient<TRoutes extends RouteTree | undefined = undefined>(
+export function createCherryClient<TRoutes extends RouteTree | undefined = undefined>(
   config: ClientConfig<TRoutes>,
 ): Client<TRoutes> {
   const fetcher = config.fetcher ?? defaultFetcher;

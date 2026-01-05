@@ -1,6 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 import * as v from "valibot";
-import { serializeQueryParams, createClient } from "../src/client";
+import { serializeQueryParams, createCherryClient } from "../src/cherry_client";
 import { route } from "../src/route";
 import { path, param } from "../src/path";
 import { HttpError, ValidationError, NetworkError } from "../src/errors";
@@ -133,10 +133,10 @@ describe("serializeQueryParams()", () => {
 });
 
 /**
- * createClient(): Factory for type-safe API clients.
+ * createCherryClient(): Factory for type-safe API clients.
  * Returns client with call() method and optional named route methods.
  */
-describe("createClient()", () => {
+describe("createCherryClient()", () => {
   let mockFetcher: Fetcher;
   let fetchCalls: { url: string; init: RequestInit }[];
 
@@ -163,7 +163,7 @@ describe("createClient()", () => {
    * Basic client creation with baseUrl only.
    */
   it("creates client with baseUrl", () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -176,7 +176,7 @@ describe("createClient()", () => {
    * Output: Request to /users/123
    */
   it("substitutes path params in URL", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -190,7 +190,7 @@ describe("createClient()", () => {
    * call() appends query params to URL.
    */
   it("appends query params to URL", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -211,7 +211,7 @@ describe("createClient()", () => {
       response: v.object({ id: v.string(), name: v.string() }),
     });
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -226,7 +226,7 @@ describe("createClient()", () => {
    * call() merges custom headers from config.
    */
   it("merges headers from config", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       headers: () => ({ Authorization: "Bearer token123" }),
       fetcher: mockFetcher,
@@ -243,7 +243,7 @@ describe("createClient()", () => {
    * call() supports async headers function.
    */
   it("supports async headers function", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       headers: async () => ({ Authorization: "Bearer async-token" }),
       fetcher: mockFetcher,
@@ -259,7 +259,7 @@ describe("createClient()", () => {
    * call() returns Ok result on successful response.
    */
   it("returns Ok result on success", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -279,7 +279,7 @@ describe("createClient()", () => {
     const errorFetcher: Fetcher = async () =>
       new Response("Not Found", { status: 404, statusText: "Not Found" });
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: errorFetcher,
     });
@@ -297,7 +297,7 @@ describe("createClient()", () => {
     const errorFetcher: Fetcher = async () =>
       new Response("Internal Error", { status: 500, statusText: "Internal Server Error" });
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: errorFetcher,
     });
@@ -323,7 +323,7 @@ describe("createClient()", () => {
       response: v.object({ id: v.string() }),
     });
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
@@ -347,7 +347,7 @@ describe("createClient()", () => {
         headers: { "Content-Type": "application/json" },
       });
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: badResponseFetcher,
     });
@@ -369,7 +369,7 @@ describe("createClient()", () => {
       throw new Error("Network unreachable");
     };
 
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: failingFetcher,
     });
@@ -386,7 +386,7 @@ describe("createClient()", () => {
    * Client with routes config exposes named methods.
    */
   it("exposes named route methods when routes provided", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
       routes: { getUser: testRoute },
@@ -401,7 +401,7 @@ describe("createClient()", () => {
    * Nested route tree creates nested client methods.
    */
   it("supports nested route trees", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
       routes: {
@@ -419,7 +419,7 @@ describe("createClient()", () => {
    * Path params are URL-encoded.
    */
   it("URL-encodes path params", async () => {
-    const client = createClient({
+    const client = createCherryClient({
       baseUrl: "https://api.example.com",
       fetcher: mockFetcher,
     });
