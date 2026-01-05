@@ -24,10 +24,10 @@ See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cher
 Cherry is a lightweight API client library that separates **route definitions** from the **client runtime**. Routes are plain objects with validation schemas — import only what you use, bundle only what you import.
 
 ```ts
-import { createClient } from "@b3b/cherry";
+import { createCherryClient } from "@b3b/cherry";
 import { listZones, getZone } from "./routes/cloudflare";
 
-const cf = createClient({
+const cf = createCherryClient({
   baseUrl: "https://api.cloudflare.com/client/v4",
   headers: () => ({ Authorization: `Bearer ${process.env.CF_TOKEN}` }),
   routes: { listZones, getZone },
@@ -96,12 +96,12 @@ deno add jsr:@b3b/cherry
 
 ```ts
 import * as v from "valibot";
-import { defineRoute } from "@b3b/cherry";
+import { route, path, param } from "@b3b/cherry";
 
-export const listZones = defineRoute({
+export const listZones = route({
   method: "GET",
-  path: "/zones",
-  params: v.object({
+  path: path`/zones`,
+  queryParams: v.object({
     account_id: v.string(),
     page: v.optional(v.number()),
   }),
@@ -114,10 +114,10 @@ export const listZones = defineRoute({
 ### 2. Create a Client
 
 ```ts
-import { createClient } from "@b3b/cherry";
+import { createCherryClient } from "@b3b/cherry";
 import { listZones, getZone, createDnsRecord } from "./routes/cloudflare";
 
-const cf = createClient({
+const cf = createCherryClient({
   baseUrl: "https://api.cloudflare.com/client/v4",
   headers: () => ({ Authorization: `Bearer ${process.env.CF_TOKEN}` }),
   routes: { listZones, getZone, createDnsRecord },
@@ -141,10 +141,10 @@ const zones = await cf.call(listZones, { account_id: "abc" });
 ### Dynamic Path Parameters
 
 ```ts
-export const getZone = defineRoute({
+export const getZone = route({
   method: "GET",
-  path: (p) => `/zones/${p.zone_id}`,
-  params: v.object({ zone_id: v.string() }),
+  path: path`/zones/${param("zone_id")}`,
+  pathParams: v.object({ zone_id: v.string() }),
   response: v.object({ /* ... */ }),
 });
 ```
@@ -154,7 +154,7 @@ export const getZone = defineRoute({
 Replace the underlying fetch logic for logging, retries, auth refresh, etc.
 
 ```ts
-createClient({
+createCherryClient({
   baseUrl: "...",
   fetcher: async (req) => {
     console.log(`→ ${req.init.method} ${req.url}`);
@@ -187,8 +187,11 @@ const withLogging = (fetcher: Fetcher): Fetcher =>
     return fetcher(req);
   };
 
-createClient({
-  fetcher: withLogging(withRetry(defaultFetcher)),
+const baseFetcher: Fetcher = (req) => fetch(req.url, req.init);
+
+createCherryClient({
+  baseUrl: "...",
+  fetcher: withLogging(withRetry(baseFetcher)),
 });
 ```
 
@@ -201,18 +204,6 @@ createClient({
 3. **User owns composition** — No built-in middleware, just a replaceable fetcher
 4. **Type-safe end-to-end** — Params validated in, response validated out
 5. **No magic** — Everything is explicit and inspectable
-
----
-
-## Generating Routes from OpenAPI
-
-Cherry includes a generator that transforms OpenAPI 3.x specs into route definitions:
-
-```bash
-cherry generate --input ./openapi.json --output ./routes/
-```
-
-See [ARCHITECTURE.md](./agent/ARCHITECTURE.md) for generator implementation details.
 
 ---
 
