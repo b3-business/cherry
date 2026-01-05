@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] - 2026-01-05
+
+### Changed
+
+- README: Reconcile documentation with actual API (`createCherryClient`, `route`, `path` tagged template)
+- README: Remove unimplemented OpenAPI generator section
+- Example: JSONPlaceholder now uses sub-namespaced routes (`posts.list`, `users.get`)
+
 ## [0.2.6] - 2026-01-05
 
 ### Fixed

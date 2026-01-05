@@ -46,86 +46,90 @@ export const UserSchema = v.object({
   }),
 });
 
-export const listPosts = route({
-  method: "GET",
-  path: path`/posts`,
-  response: v.array(PostSchema),
-});
-
-export const getPost = route({
-  method: "GET",
-  path: path`/posts/${param("id")}`,
-  pathParams: v.object({
-    id: v.number(),
+export const posts = {
+  list: route({
+    method: "GET",
+    path: path`/posts`,
+    response: v.array(PostSchema),
   }),
-  response: PostSchema,
-});
 
-export const createPost = route({
-  method: "POST",
-  path: path`/posts`,
-  bodyParams: PostInputSchema,
-  response: PostSchema,
-});
-
-export const updatePost = route({
-  method: "PUT",
-  path: path`/posts/${param("id")}`,
-  pathParams: v.object({
-    id: v.number(),
+  get: route({
+    method: "GET",
+    path: path`/posts/${param("id")}`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    response: PostSchema,
   }),
-  bodyParams: PostInputSchema,
-  response: PostSchema,
-});
 
-export const patchPost = route({
-  method: "PATCH",
-  path: path`/posts/${param("id")}`,
-  pathParams: v.object({
-    id: v.number(),
+  create: route({
+    method: "POST",
+    path: path`/posts`,
+    bodyParams: PostInputSchema,
+    response: PostSchema,
   }),
-  bodyParams: v.partial(PostInputSchema),
-  response: PostSchema,
-});
 
-export const deletePost = route({
-  method: "DELETE",
-  path: path`/posts/${param("id")}`,
-  pathParams: v.object({
-    id: v.number(),
+  update: route({
+    method: "PUT",
+    path: path`/posts/${param("id")}`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    bodyParams: PostInputSchema,
+    response: PostSchema,
   }),
-  response: v.object({}),
-});
 
-export const getPostComments = route({
-  method: "GET",
-  path: path`/posts/${param("id")}/comments`,
-  pathParams: v.object({
-    id: v.number(),
+  patch: route({
+    method: "PATCH",
+    path: path`/posts/${param("id")}`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    bodyParams: v.partial(PostInputSchema),
+    response: PostSchema,
   }),
-  response: v.array(CommentSchema),
-});
 
-export const listUsers = route({
-  method: "GET",
-  path: path`/users`,
-  response: v.array(UserSchema),
-});
-
-export const getUser = route({
-  method: "GET",
-  path: path`/users/${param("id")}`,
-  pathParams: v.object({
-    id: v.number(),
+  delete: route({
+    method: "DELETE",
+    path: path`/posts/${param("id")}`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    response: v.object({}),
   }),
-  response: UserSchema,
-});
 
-export const getUserPosts = route({
-  method: "GET",
-  path: path`/users/${param("id")}/posts`,
-  pathParams: v.object({
-    id: v.number(),
+  getComments: route({
+    method: "GET",
+    path: path`/posts/${param("id")}/comments`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    response: v.array(CommentSchema),
   }),
-  response: v.array(PostSchema),
-});
+};
+
+export const users = {
+  list: route({
+    method: "GET",
+    path: path`/users`,
+    response: v.array(UserSchema),
+  }),
+
+  get: route({
+    method: "GET",
+    path: path`/users/${param("id")}`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    response: UserSchema,
+  }),
+
+  getPosts: route({
+    method: "GET",
+    path: path`/users/${param("id")}/posts`,
+    pathParams: v.object({
+      id: v.number(),
+    }),
+    response: v.array(PostSchema),
+  }),
+};

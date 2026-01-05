@@ -10,10 +10,11 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.6
+## Latest Changelog - 0.2.7
 
-- Fix npm/JSR badges to update on new versions (rollback HTML to markdown)
-- GitHub badge shows repo name instead of stars
+- README: Reconcile documentation with actual API (`createCherryClient`, `route`, `path` tagged template)
+- README: Remove unimplemented OpenAPI generator section
+- Example: JSONPlaceholder now uses sub-namespaced routes (`posts.list`, `users.get`)
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 
