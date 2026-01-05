@@ -10,4 +10,8 @@ export default defineConfig({
   target: "es2022",
   platform: "neutral",
   external: ["valibot", "neverthrow"],
+  exports: {
+    // links my source files in the main package.json while developing, only links dist when building prod
+    devExports: true,
+  }
 });
