@@ -1,7 +1,6 @@
 # CHERRY KNOWLEDGE BASE
 
 **Generated:** 2026-01-05
-**Commit:** 86363f2
 **Branch:** main
 
 ## OVERVIEW
@@ -13,14 +12,22 @@ Tree-shakeable API client factory with Valibot validation and neverthrow error h
 ```
 cherry/
 ├── src/
-│   ├── types.ts      # Core types: CherryRoute, InferRouteInput/Output, Client
-│   └── errors.ts     # Error hierarchy: HttpError, ValidationError, NetworkError
+│   ├── index.ts          # Public exports
+│   ├── cherry_client.ts  # createCherryClient(), call(), URL building
+│   ├── route.ts          # route() builder with validation
+│   ├── path.ts           # path(), param(), optional() tagged templates
+│   ├── types.ts          # Core types: CherryRoute, InferRouteInput/Output, Client
+│   └── errors.ts         # Error hierarchy: HttpError, ValidationError, NetworkError, SerializationError
 ├── test/
-│   ├── types.test.ts   # Type-level tests with expect-type (591 lines)
-│   └── errors.test.ts  # Error class runtime tests
+│   ├── types.test.ts         # Type-level tests with expect-type
+│   ├── errors.test.ts        # Error class runtime tests
+│   ├── path.test.ts          # Path template tests
+│   ├── route.test.ts         # Route builder tests
+│   ├── cherry_client.test.ts # Client and query serialization tests
+│   └── integration.test.ts   # End-to-end CRUD and neverthrow pattern tests
 ├── agent/
-│   └── ARCHITECTURE.md # Full implementation plan (1129 lines)
-└── playground/         # Empty, for experiments
+│   └── ARCHITECTURE.md   # Full implementation plan
+└── playground/           # Empty, for experiments
 ```
 
 ## WHERE TO LOOK
@@ -33,8 +40,8 @@ cherry/
 | Implementation plan | `agent/ARCHITECTURE.md` | Phase-by-phase build guide |
 | Path templates | `src/path.ts` | `path()`, `param()`, `optional()` tagged templates |
 | Route builder | `src/route.ts` | `route()` with validation |
-| Missing: `client.ts` | Not yet implemented | See ARCHITECTURE.md Phase 5 |
-| Missing: `index.ts` | Not yet implemented | Public exports |
+| Client | `src/cherry_client.ts` | `createCherryClient()`, `serializeQueryParams()` |
+| Public exports | `src/index.ts` | All public API exports |
 
 ## CONVENTIONS
 
@@ -83,9 +90,9 @@ bun install                # Install deps
 | 1. Types & Errors | DONE | `src/types.ts`, `src/errors.ts` |
 | 2. Path Templates | DONE | `src/path.ts` |
 | 3. Route Builder | DONE | `src/route.ts` |
-| 4. Query Serialization | TODO | Part of `src/client.ts` |
-| 5. Client Core | TODO | `src/client.ts` |
-| 6. Integration | TODO | `src/index.ts`, integration tests |
+| 4. Query Serialization | DONE | `src/cherry_client.ts` |
+| 5. Client Core | DONE | `src/cherry_client.ts` |
+| 6. Integration | DONE | `src/index.ts`, `test/integration.test.ts` |
 
 ## DEPENDENCIES
 
