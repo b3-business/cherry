@@ -237,6 +237,35 @@ bun run typecheck                              # In example dir
 bun test                                       # In example dir
 ```
 
+## PUBLISHING TO NPM
+
+Publishing uses **trusted OIDC publishing** (no tokens required). The workflow triggers automatically on tag push.
+
+### To publish a new version:
+
+1. **Update version** in `packages/cherry/package.json`
+2. **Update changelog** in `packages/cherry/CHANGELOG.md` and `packages/cherry/README.md` (Latest Changelog section)
+3. **Commit and tag**:
+   ```bash
+   git add -A
+   git commit -m "release: X.Y.Z - description"
+   git tag X.Y.Z
+   git push && git push --tags
+   ```
+
+The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
+- Run checks, tests, and build
+- Publish to npm with provenance attestation
+
+### Tag patterns that trigger publish:
+- `0.*` (e.g., `0.3.0`)
+- `1.*` (e.g., `1.0.0`)
+
+### Requirements (already configured):
+- `repository` field in `package.json` must match GitHub repo URL
+- Trusted publisher configured on npmjs.com (Settings → Trusted Publisher)
+- Node 24+ for npm 11.5.1+ (required for OIDC)
+
 ## NOTES
 
 - `playground/` is empty - use for API experiments
