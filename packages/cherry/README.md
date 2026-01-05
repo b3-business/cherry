@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.0
+## Latest Changelog - 0.2.1
 
-- GitHub Actions workflow for trusted OIDC publishing to npm (no tokens required)
+- Fix: Use Node 24 for npm 11.5.1+ (required for trusted publishing)
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 

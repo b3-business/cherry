@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2025-01-05
+
+### Fixed
+
+- Use Node 24 for npm 11.5.1+ (required for trusted OIDC publishing)
+
 ## [0.2.0] - 2025-01-05
 
 ### Added
