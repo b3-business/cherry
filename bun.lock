@@ -8,6 +8,20 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples-bun/todo-bun-preview": {
+      "name": "@b3b/cherry-example-todo-bun-preview",
+      "version": "0.1.0",
+      "dependencies": {
+        "@b3-business/cherry": "catalog:prod-npm-preview",
+        "neverthrow": "^8.2.0",
+        "valibot": "^1.2.0",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.5",
+        "npm-run-all": "^4.1.5",
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/jsonplaceholder": {
       "name": "@b3b/cherry-example-jsonplaceholder",
       "version": "0.1.0",
@@ -27,20 +41,6 @@
       "version": "0.1.0",
       "dependencies": {
         "@b3-business/cherry": "workspace:*",
-        "neverthrow": "^8.2.0",
-        "valibot": "^1.2.0",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.3.5",
-        "npm-run-all": "^4.1.5",
-        "typescript": "^5.9.3",
-      },
-    },
-    "examples/todo-npm-preview": {
-      "name": "@b3b/cherry-example-todo-npm-preview",
-      "version": "0.1.0",
-      "dependencies": {
-        "@b3-business/cherry": "catalog:prod-npm-preview",
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
       },
@@ -80,7 +80,7 @@
 
     "@b3b/cherry-example-pokeapi": ["@b3b/cherry-example-pokeapi@workspace:examples/pokeapi"],
 
-    "@b3b/cherry-example-todo-npm-preview": ["@b3b/cherry-example-todo-npm-preview@workspace:examples/todo-npm-preview"],
+    "@b3b/cherry-example-todo-bun-preview": ["@b3b/cherry-example-todo-bun-preview@workspace:examples-bun/todo-bun-preview"],
 
     "@babel/generator": ["@babel/generator@7.28.5", "", { "dependencies": { "@babel/parser": "^7.28.5", "@babel/types": "^7.28.5", "@jridgewell/gen-mapping": "^0.3.12", "@jridgewell/trace-mapping": "^0.3.28", "jsesc": "^3.0.2" } }, "sha512-3EwLFhZ38J4VyIP6WNtt2kUdW9dokXA9Cr4IVIFHuCpZ3H8/YFOl5JjZHisrn1fATPBmKKqXzDFvh9fUwHz6CQ=="],
 

@@ -4,7 +4,8 @@
   "workspaces": {
     "packages": [
       "packages/cherry",
-      "examples/*"
+      "examples/*",
+      "examples-bun/*"
     ],
     "catalogs": {
       "prod-npm-preview": {
