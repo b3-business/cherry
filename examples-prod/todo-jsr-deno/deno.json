@@ -2,7 +2,7 @@
   "name": "@b3b/cherry-example-todo-jsr-deno",
   "version": "0.1.0",
   "tasks": {
-    "test": "deno test --allow-net"
+    "test": "deno test --allow-net test/*.deno-test.ts"
   },
   "imports": {
     "@b3-business/cherry": "jsr:@b3-business/cherry@^0.2.4",
