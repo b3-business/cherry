@@ -13,7 +13,7 @@ import type {
   RoutesToClient,
   QueryParamOptions,
 } from "./types";
-import { HttpError, ValidationError, NetworkError, UnknownCherryError } from "./errors";
+import { HttpError, ValidationError, NetworkError, SerializationError, UnknownCherryError } from "./errors";
 
 const defaultFetcher: Fetcher = (req) => fetch(req.url, req.init);
 
@@ -45,6 +45,13 @@ export function serializeQueryParams(
             searchParams.append(`${key}[]`, String(item));
           }
           break;
+        case "json":
+          try {
+            searchParams.set(key, JSON.stringify(value));
+          } catch (error) {
+            throw new SerializationError("query", key, error);
+          }
+          break;
       }
     } else {
       searchParams.set(key, String(value));
@@ -67,6 +74,7 @@ export function createCherryClient<TRoutes extends RouteTree | undefined = undef
       if (error instanceof HttpError) return error;
       if (error instanceof ValidationError) return error;
       if (error instanceof NetworkError) return error;
+      if (error instanceof SerializationError) return error;
       return new UnknownCherryError(error);
     });
   }

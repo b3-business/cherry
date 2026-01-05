@@ -4,6 +4,7 @@ import {
   HttpError,
   ValidationError,
   NetworkError,
+  SerializationError,
   UnknownCherryError,
   isCherryError,
   cherryErr,
@@ -174,6 +175,46 @@ describe("NetworkError", () => {
   });
 });
 
+describe("SerializationError", () => {
+  it("should extend CherryError", () => {
+    const error = new SerializationError("query", "tags");
+    expect(error).toBeInstanceOf(CherryError);
+    expect(error).toBeInstanceOf(SerializationError);
+  });
+
+  it("should have type property", () => {
+    const error = new SerializationError("query", "tags");
+    expect(error.type).toBe("SerializationError");
+  });
+
+  it("should have retryable property - always false", () => {
+    const error = new SerializationError("query", "tags");
+    expect(error.retryable).toBe(false);
+  });
+
+  it("should have message property", () => {
+    const error = new SerializationError("query", "tags");
+    expect(error.message).toBe('Failed to serialize query parameter "tags"');
+  });
+
+  it("should have name property", () => {
+    const error = new SerializationError("query", "tags");
+    expect(error.name).toBe("SerializationError");
+  });
+
+  it("should store target and key", () => {
+    const error = new SerializationError("body", "data");
+    expect(error.target).toBe("body");
+    expect(error.key).toBe("data");
+  });
+
+  it("should accept optional cause", () => {
+    const cause = new Error("Circular reference");
+    const error = new SerializationError("query", "tags", cause);
+    expect(error.cause).toBe(cause);
+  });
+});
+
 describe("UnknownCherryError", () => {
   it("should extend CherryError", () => {
     const error = new UnknownCherryError();
@@ -213,6 +254,7 @@ describe("isCherryError", () => {
     expect(isCherryError(new HttpError(404, "Not Found"))).toBe(true);
     expect(isCherryError(new ValidationError("request", []))).toBe(true);
     expect(isCherryError(new NetworkError())).toBe(true);
+    expect(isCherryError(new SerializationError("query", "tags"))).toBe(true);
     expect(isCherryError(new UnknownCherryError())).toBe(true);
   });
 

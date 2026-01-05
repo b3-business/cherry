@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { serializeQueryParams, createCherryClient } from "../src/cherry_client";
 import { route } from "../src/route";
 import { path, param } from "../src/path";
-import { HttpError, ValidationError, NetworkError } from "../src/errors";
+import { HttpError, ValidationError, NetworkError, SerializationError } from "../src/errors";
 import type { Fetcher } from "../src/types";
 
 /**
@@ -87,6 +87,30 @@ describe("serializeQueryParams()", () => {
   it("serializes arrays with brackets format", () => {
     const result = serializeQueryParams({ tags: ["a", "b", "c"] }, { arrayFormat: "brackets" });
     expect(result).toBe("tags%5B%5D=a&tags%5B%5D=b&tags%5B%5D=c");
+  });
+
+  /**
+   * Array format "json": JSON-encodes the array value.
+   * Input:  { tags: ["a", "b"] }
+   * Output: "tags=%5B%22a%22%2C%22b%22%5D" (URL-encoded JSON)
+   * Useful for APIs that expect JSON arrays in query params.
+   */
+  it("serializes arrays with json format", () => {
+    const result = serializeQueryParams({ tags: ["a", "b", "c"] }, { arrayFormat: "json" });
+    expect(result).toBe("tags=%5B%22a%22%2C%22b%22%2C%22c%22%5D");
+  });
+
+  /**
+   * JSON format throws SerializationError on circular references.
+   * Circular structures cannot be serialized to JSON.
+   */
+  it("throws SerializationError on circular reference with json format", () => {
+    const circular: any = { items: [] };
+    circular.items.push(circular);
+
+    expect(() => serializeQueryParams({ data: circular.items }, { arrayFormat: "json" })).toThrow(
+      SerializationError,
+    );
   });
 
   /**

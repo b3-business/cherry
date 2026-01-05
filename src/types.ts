@@ -30,7 +30,7 @@ export type CherryRoute<
 
 /** Options for query parameter serialization */
 export type QueryParamOptions = {
-  arrayFormat?: "repeat" | "comma" | "brackets";
+  arrayFormat?: "repeat" | "comma" | "brackets" | "json";
   customSerializer?: (params: Record<string, unknown>) => string;
 };
 

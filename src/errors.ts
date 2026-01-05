@@ -51,6 +51,20 @@ export class NetworkError extends CherryError {
   }
 }
 
+/** Serialization errors (e.g., circular references, BigInt in JSON) */
+export class SerializationError extends CherryError {
+  readonly type = "SerializationError";
+  readonly retryable = false;
+
+  constructor(
+    public readonly target: "query" | "body",
+    public readonly key: string,
+    cause?: unknown,
+  ) {
+    super(`Failed to serialize ${target} parameter "${key}"`, { cause });
+  }
+}
+
 /** Catch-all for unexpected errors */
 export class UnknownCherryError extends CherryError {
   readonly type = "UnknownCherryError";
