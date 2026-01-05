@@ -5,6 +5,7 @@
     "": {
       "name": "@b3b/cherry-monorepo",
       "devDependencies": {
+        "@types/bun": "^1.3.5",
         "typescript": "^5.9.3",
       },
     },
@@ -38,7 +39,7 @@
     },
     "packages/cherry": {
       "name": "@b3-business/cherry",
-      "version": "0.2.7",
+      "version": "0.3.0",
       "dependencies": {
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
