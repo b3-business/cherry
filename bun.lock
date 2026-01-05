@@ -38,7 +38,7 @@
     },
     "packages/cherry": {
       "name": "@b3-business/cherry",
-      "version": "0.2.4",
+      "version": "0.2.7",
       "dependencies": {
         "neverthrow": "^8.2.0",
         "valibot": "^1.2.0",
