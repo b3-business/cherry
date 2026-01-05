@@ -4,8 +4,8 @@
 
 A tree-shakeable, minimal API client factory. Import only the routes you need — nothing more.
 
-[![npm](https://img.shields.io/npm/v/@b3b/cherry)](https://www.npmjs.com/package/@b3b/cherry)
-[![JSR](https://jsr.io/badges/@b3b/cherry)](https://jsr.io/@b3b/cherry)
+[![npm](https://img.shields.io/npm/v/@b3-business/cherry)](https://www.npmjs.com/package/@b3-business/cherry)
+[![JSR](https://jsr.io/badges/@b3-business/cherry)](https://jsr.io/@b3-business/cherry)
 
 ---
 
