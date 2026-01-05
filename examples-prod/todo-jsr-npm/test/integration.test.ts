@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { jsonPlaceholder } from "../src/client";
 import { getPost } from "../src/routes";
 
@@ -87,7 +87,7 @@ describe("JSONPlaceholder User Routes", () => {
     if (!result.isOk()) return;
 
     expect(result.value.length).toBeGreaterThan(0);
-    result.value.forEach((post) => {
+    result.value.forEach((post: { userId: number }) => {
       expect(post.userId).toBe(1);
     });
   });

@@ -1,16 +1,15 @@
 {
-  "name": "@b3b/cherry-example-todo-npm-preview",
+  "name": "@b3b/cherry-example-todo-jsr-bun",
   "version": "0.1.0",
   "private": true,
-  "description": "Cherry example using JSONPlaceholder API with npm and npm-published cherry package",
+  "description": "Cherry example: cherry from jsr, run with bun",
   "type": "module",
   "scripts": {
-    "check": "npm run typecheck",
     "typecheck": "tsc --noEmit -p .",
     "test": "bun test"
   },
   "dependencies": {
-    "@b3-business/cherry": "^0.2.4",
+    "@b3-business/cherry": "npm:@jsr/b3-business__cherry@^0.2.4",
     "neverthrow": "^8.2.0",
     "valibot": "^1.2.0"
   },

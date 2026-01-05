@@ -1,0 +1,20 @@
+{
+  "name": "@b3b/cherry-example-todo-jsr-npm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cherry example: cherry from jsr, run with npm",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@b3-business/cherry": "npm:@jsr/b3-business__cherry@^0.2.4",
+    "neverthrow": "^8.2.0",
+    "valibot": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5",
+    "typescript": "^5.9.3"
+  }
+}
