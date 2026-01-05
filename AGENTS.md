@@ -31,9 +31,9 @@ cherry/
 | Add/modify types | `src/types.ts` | Uses Valibot `BaseSchema` generics |
 | Type tests | `test/types.test.ts` | Uses `expect-type` for compile-time checks |
 | Implementation plan | `agent/ARCHITECTURE.md` | Phase-by-phase build guide |
+| Path templates | `src/path.ts` | `path()`, `param()`, `optional()` tagged templates |
+| Route builder | `src/route.ts` | `route()` with validation |
 | Missing: `client.ts` | Not yet implemented | See ARCHITECTURE.md Phase 5 |
-| Missing: `route.ts` | Not yet implemented | See ARCHITECTURE.md Phase 3 |
-| Missing: `path.ts` | Not yet implemented | See ARCHITECTURE.md Phase 2 |
 | Missing: `index.ts` | Not yet implemented | Public exports |
 
 ## CONVENTIONS
@@ -55,6 +55,10 @@ cherry/
 - **Type tests**: Heavy use of `expect-type` for compile-time assertions
 - **Separate tsconfig**: `tsconfig.test.json` includes `bun-types`
 - **No explicit test script**: Use `bun test` directly or `npm run check` for typecheck
+- **Test documentation**: Add <10 line JSDoc comments to each `describe()` block and individual test cases explaining:
+  - What the test validates (input/output examples)
+  - Use cases and when the pattern applies
+  - Edge cases being covered
 
 ## COMMANDS
 
@@ -77,8 +81,8 @@ bun install                # Install deps
 | Phase | Status | Files |
 |-------|--------|-------|
 | 1. Types & Errors | DONE | `src/types.ts`, `src/errors.ts` |
-| 2. Path Templates | TODO | `src/path.ts` |
-| 3. Route Builder | TODO | `src/route.ts` |
+| 2. Path Templates | DONE | `src/path.ts` |
+| 3. Route Builder | DONE | `src/route.ts` |
 | 4. Query Serialization | TODO | Part of `src/client.ts` |
 | 5. Client Core | TODO | `src/client.ts` |
 | 6. Integration | TODO | `src/index.ts`, integration tests |
