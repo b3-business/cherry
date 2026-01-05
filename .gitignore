@@ -1,3 +1,6 @@
 node_modules/
 agent/tmp/*
 !agent/tmp/.gitkeep
+
+# ignore this tsbuildinfo in whole monorepo, this is a ts compilation cache file
+*.tsbuildinfo
