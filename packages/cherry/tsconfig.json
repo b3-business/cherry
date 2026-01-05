@@ -15,8 +15,9 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "types": ["@types/bun"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "playground", "test"]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "playground"]
 }

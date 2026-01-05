@@ -23,10 +23,9 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "check": "run-s lint typecheck typecheck-test",
+    "check": "run-s lint typecheck",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p .",
-    "typecheck-test": "tsc --noEmit -p tsconfig.test.json",
     "test": "bun test",
     "prepublishOnly": "npm run check && npm run test && npm run build",
     "dry-npm": "npm publish --dry-run --access public",
