@@ -243,7 +243,7 @@ Publishing uses **trusted OIDC publishing** (no tokens required). The workflow t
 
 ### To publish a new version:
 
-1. **Update version** in `packages/cherry/package.json`
+1. **Update version** in `packages/cherry/package.json` and `packages/cherry/jsr.json`
 2. **Update changelog** in `packages/cherry/CHANGELOG.md` and `packages/cherry/README.md` (Latest Changelog section)
 3. **Commit and tag**:
    ```bash
@@ -256,6 +256,7 @@ Publishing uses **trusted OIDC publishing** (no tokens required). The workflow t
 The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
 - Run checks, tests, and build
 - Publish to npm with provenance attestation
+- Publish to JSR (jsr.io)
 
 ### Tag patterns that trigger publish:
 - `0.*` (e.g., `0.3.0`)
@@ -265,6 +266,7 @@ The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
 - `repository` field in `package.json` must match GitHub repo URL
 - Trusted publisher configured on npmjs.com (Settings → Trusted Publisher)
 - Node 24+ for npm 11.5.1+ (required for OIDC)
+- Package linked to GitHub repo on jsr.io (Settings → Link GitHub Repository)
 
 ## NOTES
 

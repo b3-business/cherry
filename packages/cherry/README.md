@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.2
+## Latest Changelog - 0.2.3
 
-- Fix: Add repository field for npm provenance verification
+- Add JSR (jsr.io) publishing
 
 See [CHANGELOG.md](https://github.com/b3-business/cherry/blob/main/packages/cherry/CHANGELOG.md) for full history.
 
