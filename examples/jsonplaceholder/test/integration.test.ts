@@ -4,7 +4,6 @@ import {posts} from '../src/routes';
 
 describe('JSONPlaceholder Post Roundtrip', () => {
 	it('creates, retrieves, updates, and deletes a post', async () => {
-		jsonPlaceholder.posts.get();
 		const createResult = await jsonPlaceholder.posts.create({
 			userId: 1,
 			title: 'Test Post from Cherry',

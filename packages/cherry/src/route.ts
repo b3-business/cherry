@@ -9,10 +9,10 @@ import type {
 const HttpMethodSchema = v.picklist(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
 export type RouteConfig<
-  TPathParams extends v.BaseSchema<any, any, any> | undefined,
-  TQueryParams extends v.BaseSchema<any, any, any> | undefined,
-  TBodyParams extends v.BaseSchema<any, any, any> | undefined,
-  TResponse extends v.BaseSchema<any, any, any>,
+  TPathParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TQueryParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TBodyParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TResponse extends v.BaseSchema<any, any, any> = v.BaseSchema<any, any, any>,
 > = {
   method: HttpMethod;
   path: PathTemplate;
@@ -25,10 +25,10 @@ export type RouteConfig<
 };
 
 export function route<
-  TPathParams extends v.BaseSchema<any, any, any> | undefined,
-  TQueryParams extends v.BaseSchema<any, any, any> | undefined,
-  TBodyParams extends v.BaseSchema<any, any, any> | undefined,
-  TResponse extends v.BaseSchema<any, any, any>,
+  TPathParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TQueryParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TBodyParams extends v.BaseSchema<any, any, any> | undefined = undefined,
+  TResponse extends v.BaseSchema<any, any, any> = v.BaseSchema<any, any, any>,
 >(
   config: RouteConfig<TPathParams, TQueryParams, TBodyParams, TResponse>,
 ): CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse> {

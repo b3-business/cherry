@@ -36,14 +36,31 @@ export type QueryParamOptions = {
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
+type HasRequiredKeys<T> = keyof T extends never ? false : true;
+
+type InferSchemaInput<T> = 
+  [T] extends [undefined] 
+    ? {}
+    : [NonNullable<T>] extends [never] 
+      ? {} 
+      : [NonNullable<T>] extends [BaseSchema<any, any, any>] 
+        ? InferInput<NonNullable<T>> 
+        : {};
+
+type BuildRouteInputFromProps<
+  TPathParams,
+  TQueryParams,
+  TBodyParams
+> = InferSchemaInput<TPathParams> &
+    InferSchemaInput<TQueryParams> &
+    InferSchemaInput<TBodyParams>;
+
 /** Infer combined input params from a route */
 export type InferRouteInput<T> = 
-  T extends CherryRoute<infer TPath, infer TQuery, infer TBody, any>
-    ? Prettify<
-        (TPath extends BaseSchema<any, any, any> ? InferInput<TPath> : {}) &
-        (TQuery extends BaseSchema<any, any, any> ? InferInput<TQuery> : {}) &
-        (TBody extends BaseSchema<any, any, any> ? InferInput<TBody> : {})
-      >
+  T extends { pathParams?: infer TPath; queryParams?: infer TQuery; bodyParams?: infer TBody }
+    ? HasRequiredKeys<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
+      ? Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
+      : Record<string, never>
     : never;
 
 /** Infer response output from a route */

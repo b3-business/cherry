@@ -318,7 +318,7 @@ describe("InferRouteInput", () => {
     }>();
   });
 
-  it("should infer empty object when no params", () => {
+  it("should infer Record<string, never> when no params (prevents extra properties)", () => {
     type Route = CherryRoute<
       undefined,
       undefined,
@@ -327,7 +327,7 @@ describe("InferRouteInput", () => {
     >;
     type Input = InferRouteInput<Route>;
 
-    expectTypeOf<Input>().toEqualTypeOf<{}>();
+    expectTypeOf<Input>().toEqualTypeOf<Record<string, never>>();
   });
 });
 
