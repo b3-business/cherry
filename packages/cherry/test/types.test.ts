@@ -424,7 +424,7 @@ describe("Fetcher", () => {
  * Enables client.users.get() vs client.getUser() access patterns.
  */
 describe("RouteTree", () => {
-  const UserRoute: CherryRoute<any, any, any, any> = {} as any;
+  const UserRoute: CherryRoute<undefined, undefined, undefined, any> = {} as any;
 
   it("should accept flat route tree", () => {
     const tree: RouteTree = {
@@ -468,27 +468,27 @@ describe("RouteTree", () => {
  * This is the core type magic enabling typed client.users.get({id: "1"}).
  */
 describe("RoutesToClient", () => {
-  const _UserRoute: CherryRoute<any, any, any, any> = {} as any;
+  const _UserRoute: CherryRoute<undefined, undefined, undefined, any> = {} as any;
 
   it("should convert route tree to client method tree", () => {
     type Tree = {
-      getUser: CherryRoute<any, any, any, any>;
-      createUser: CherryRoute<any, any, any, any>;
+      getUser: CherryRoute<undefined, undefined, undefined, any>;
+      createUser: CherryRoute<undefined, undefined, undefined, any>;
     };
 
     type ClientTree = RoutesToClient<Tree>;
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
-      getUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
-      createUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+      getUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
+      createUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
     }>();
   });
 
   it("should handle nested route trees", () => {
     type Tree = {
       users: {
-        getUser: CherryRoute<any, any, any, any>;
-        createUser: CherryRoute<any, any, any, any>;
+        getUser: CherryRoute<undefined, undefined, undefined, any>;
+        createUser: CherryRoute<undefined, undefined, undefined, any>;
       };
     };
 
@@ -496,8 +496,8 @@ describe("RoutesToClient", () => {
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
       users: {
-        getUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
-        createUser: () => CherryResult<InferRouteOutput<CherryRoute<any, any, any, any>>>;
+        getUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
+        createUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
       };
     }>();
   });
@@ -556,7 +556,7 @@ describe("Client", () => {
   it("should extend with route methods when routes are provided", () => {
     const client: Client<{
       users: {
-        getUser: CherryRoute<any, any, any, any>;
+        getUser: CherryRoute<undefined, undefined, undefined, any>;
       };
     }> = {} as any;
 
@@ -609,7 +609,7 @@ describe("ClientConfig", () => {
 
   it("should accept routes", () => {
     const routes: RouteTree = {
-      getUser: {} as CherryRoute<any, any, any, any>,
+      getUser: {} as CherryRoute<undefined, undefined, undefined, any>,
     };
     const config: ClientConfig<typeof routes> = {
       baseUrl: "https://api.example.com",

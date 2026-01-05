@@ -1,6 +1,6 @@
 export { createCherryClient, serializeQueryParams } from "./cherry_client";
 
-export { route, type RouteConfig } from "./route";
+export { route } from "./route";
 
 export { path, param, optional, type PathParam, type OptionalParam, type AnyPathParam } from "./path";
 

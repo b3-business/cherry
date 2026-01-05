@@ -1,28 +1,7 @@
 import * as v from "valibot";
-import type {
-  CherryRoute,
-  HttpMethod,
-  PathTemplate,
-  QueryParamOptions,
-} from "./types";
+import type { CherryRoute } from "./types";
 
 const HttpMethodSchema = v.picklist(["GET", "POST", "PUT", "PATCH", "DELETE"]);
-
-export type RouteConfig<
-  TPathParams extends v.BaseSchema<any, any, any> | undefined = undefined,
-  TQueryParams extends v.BaseSchema<any, any, any> | undefined = undefined,
-  TBodyParams extends v.BaseSchema<any, any, any> | undefined = undefined,
-  TResponse extends v.BaseSchema<any, any, any> = v.BaseSchema<any, any, any>,
-> = {
-  method: HttpMethod;
-  path: PathTemplate;
-  pathParams?: TPathParams;
-  queryParams?: TQueryParams;
-  bodyParams?: TBodyParams;
-  response: TResponse;
-  queryParamOptions?: QueryParamOptions;
-  description?: string;
-};
 
 export function route<
   TPathParams extends v.BaseSchema<any, any, any> | undefined = undefined,
@@ -30,7 +9,7 @@ export function route<
   TBodyParams extends v.BaseSchema<any, any, any> | undefined = undefined,
   TResponse extends v.BaseSchema<any, any, any> = v.BaseSchema<any, any, any>,
 >(
-  config: RouteConfig<TPathParams, TQueryParams, TBodyParams, TResponse>,
+  config: CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse>,
 ): CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse> {
   // validate HTTP method
   v.parse(HttpMethodSchema, config.method);

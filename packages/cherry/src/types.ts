@@ -2,6 +2,8 @@ import type { BaseSchema, InferInput, InferOutput } from "valibot";
 import type { ResultAsync } from "neverthrow";
 import type { CherryError } from "./errors";
 
+type AnySchema = BaseSchema<any, any, any>;
+
 /** HTTP methods supported by Cherry */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -13,10 +15,10 @@ export type PathTemplate = {
 
 /** Route definition with separated parameter schemas */
 export type CherryRoute<
-  TPathParams extends BaseSchema<any, any, any> | undefined = undefined,
-  TQueryParams extends BaseSchema<any, any, any> | undefined = undefined,
-  TBodyParams extends BaseSchema<any, any, any> | undefined = undefined,
-  TResponse extends BaseSchema<any, any, any> = BaseSchema<any, any, any>,
+  TPathParams extends AnySchema | undefined = undefined,
+  TQueryParams extends AnySchema | undefined = undefined,
+  TBodyParams extends AnySchema | undefined = undefined,
+  TResponse extends AnySchema = AnySchema,
 > = {
   method: HttpMethod;
   path: PathTemplate;
@@ -34,18 +36,13 @@ export type QueryParamOptions = {
   customSerializer?: (params: Record<string, unknown>) => string;
 };
 
+type AnyCherryRoute = CherryRoute<any, any, any, any>;
+
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
-type HasRequiredKeys<T> = keyof T extends never ? false : true;
+type IsEmptyObject<T> = keyof T extends never ? true : false;
 
-type InferSchemaInput<T> = 
-  [T] extends [undefined] 
-    ? {}
-    : [NonNullable<T>] extends [never] 
-      ? {} 
-      : [NonNullable<T>] extends [BaseSchema<any, any, any>] 
-        ? InferInput<NonNullable<T>> 
-        : {};
+type InferSchemaInput<T> = T extends AnySchema ? InferInput<T> : {};
 
 type BuildRouteInputFromProps<
   TPathParams,
@@ -57,14 +54,14 @@ type BuildRouteInputFromProps<
 
 export type InferRouteInput<T> = 
   T extends { pathParams?: infer TPath; queryParams?: infer TQuery; bodyParams?: infer TBody }
-    ? HasRequiredKeys<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
-      ? Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
-      : void
+    ? IsEmptyObject<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
+      ? void
+      : Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
     : never;
 
 /** Infer response output from a route */
-export type InferRouteOutput<T extends CherryRoute<any, any, any, any>> =
-  T["response"] extends BaseSchema<any, any, any> ? InferOutput<T["response"]> : never;
+export type InferRouteOutput<T extends AnyCherryRoute> =
+  T["response"] extends AnySchema ? InferOutput<T["response"]> : never;
 
 /** Cherry result type - always ResultAsync */
 export type CherryResult<T> = ResultAsync<T, CherryError>;
@@ -80,7 +77,7 @@ export type Fetcher = (req: FetchRequest) => Promise<Response>;
 
 /** Route tree (supports namespacing via nested objects) */
 export type RouteTree = {
-  [key: string]: CherryRoute<any, any, any, any> | RouteTree;
+  [key: string]: AnyCherryRoute | RouteTree;
 };
 
 /** Client configuration */
@@ -92,7 +89,7 @@ export type ClientConfig<TRoutes extends RouteTree | undefined = undefined> = {
 };
 
 export type Client<TRoutes extends RouteTree | undefined = undefined> = {
-  call: <T extends CherryRoute<any, any, any, any>>(
+  call: <T extends AnyCherryRoute>(
     route: T,
     ...args: InferRouteInput<T> extends void ? [] : [params: InferRouteInput<T>]
   ) => CherryResult<InferRouteOutput<T>>;
@@ -100,7 +97,7 @@ export type Client<TRoutes extends RouteTree | undefined = undefined> = {
 
 /** Convert a nested route tree into a nested client method tree */
 export type RoutesToClient<TRoutes extends RouteTree> = {
-  [K in keyof TRoutes]: TRoutes[K] extends CherryRoute<any, any, any, any>
+  [K in keyof TRoutes]: TRoutes[K] extends AnyCherryRoute
     ? InferRouteInput<TRoutes[K]> extends void
       ? () => CherryResult<InferRouteOutput<TRoutes[K]>>
       : (params: InferRouteInput<TRoutes[K]>) => CherryResult<InferRouteOutput<TRoutes[K]>>
