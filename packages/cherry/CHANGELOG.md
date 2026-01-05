@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2025-01-05
+
+### Fixed
+
+- Add repository field to package.json for npm provenance verification
+
 ## [0.2.1] - 2025-01-05
 
 ### Fixed

@@ -10,9 +10,9 @@ A tree-shakeable, minimal API client factory. Import only the routes you need â€
 
 ---
 
-## Latest Changelog - 0.2.1
+## Latest Changelog - 0.2.2
 
-- Fix: Use Node 24 for npm 11.5.1+ (required for trusted publishing)
+- Fix: Add repository field for npm provenance verification
 
 See [CHANGELOG.md](./CHANGELOG.md) for full history.
 

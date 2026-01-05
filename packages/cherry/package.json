@@ -1,7 +1,12 @@
 {
   "name": "@b3-business/cherry",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A tree-shakeable, minimal API client factory. Import only the routes you need — nothing more.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/b3-business/cherry"
+  },
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
