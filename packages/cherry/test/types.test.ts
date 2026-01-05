@@ -95,11 +95,13 @@ describe("QueryParamOptions", () => {
           .map(([k, v]) => `${k}=${v}`)
           .join("&"),
     };
-    expectTypeOf(options.customSerializer).toBeFunction;
-    expectTypeOf(options.customSerializer).parameters.toEqualTypeOf<
+    // Assert customSerializer is defined before type checks
+    const serializer = options.customSerializer!;
+    expectTypeOf(serializer).toBeFunction();
+    expectTypeOf(serializer).parameters.toEqualTypeOf<
       [params: Record<string, unknown>]
     >();
-    expectTypeOf(options.customSerializer).returns.toBeString();
+    expectTypeOf(serializer).returns.toBeString();
   });
 
   it("should be optional", () => {
@@ -466,7 +468,7 @@ describe("RouteTree", () => {
  * This is the core type magic enabling typed client.users.get({id: "1"}).
  */
 describe("RoutesToClient", () => {
-  const UserRoute: CherryRoute<any, any, any, any> = {} as any;
+  const _UserRoute: CherryRoute<any, any, any, any> = {} as any;
 
   it("should convert route tree to client method tree", () => {
     type Tree = {

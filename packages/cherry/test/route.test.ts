@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import { expectTypeOf } from "expect-type";
 import * as v from "valibot";
-import { route, type RouteConfig } from "../src/route";
-import { path, param, optional } from "../src/path";
-import type { CherryRoute, InferRouteInput, InferRouteOutput } from "../src/types";
+import { route } from "../src/route";
+import { path, param } from "../src/path";
+import type { InferRouteInput, InferRouteOutput } from "../src/types";
 
 /**
  * route(): Creates validated route definitions.
