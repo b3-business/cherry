@@ -38,6 +38,18 @@ type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type HasRequiredKeys<T> = keyof T extends never ? false : true;
 
+/**
+ * Extracts input type from a Valibot schema, handling undefined/never edge cases.
+ * 
+ * Uses tuple wrapping `[T] extends [X]` to prevent distributive conditional behavior.
+ * Without this, `Schema | undefined` would distribute and produce `InferInput<Schema> | {}`
+ * which simplifies to `{}` (losing the required properties).
+ * 
+ * The check order matters:
+ * 1. `[T] extends [undefined]` - schema not provided, return empty object
+ * 2. `[NonNullable<T>] extends [never]` - T was only undefined, return empty object  
+ * 3. `[NonNullable<T>] extends [BaseSchema]` - valid schema, infer its input type
+ */
 type InferSchemaInput<T> = 
   [T] extends [undefined] 
     ? {}
@@ -55,7 +67,13 @@ type BuildRouteInputFromProps<
     InferSchemaInput<TQueryParams> &
     InferSchemaInput<TBodyParams>;
 
-/** Infer combined input params from a route */
+/**
+ * Infers combined input params from a route by extracting from property types directly.
+ * 
+ * Uses property-based inference `{ pathParams?: infer TPath }` instead of generic inference
+ * because generic inference through CherryRoute<infer P, ...> can lose concrete types
+ * when optional properties aren't provided (TypeScript infers the full constraint instead).
+ */
 export type InferRouteInput<T> = 
   T extends { pathParams?: infer TPath; queryParams?: infer TQuery; bodyParams?: infer TBody }
     ? HasRequiredKeys<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
