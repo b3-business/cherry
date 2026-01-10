@@ -46,23 +46,44 @@ bun add @b3-business/hosting.de
 ### 1. Create a Client
 
 ```ts
-import { createHostingDeClient } from "@b3-business/hosting.de";
-// Import only the routes you need (once implemented)
-// import { listDomains, getDomain } from "@b3-business/hosting.de/routes";
+import { createHostingDeClient, zonesFind } from "@b3-business/hosting.de";
 
 const client = createHostingDeClient({
   apiToken: process.env.HOSTING_DE_API_TOKEN!,
-  // routes: { listDomains, getDomain },
+  routes: { zonesFind },
 });
 ```
 
 ### 2. Call the API
 
 ```ts
-// Once routes are implemented:
-// const domains = await client.listDomains({});
-// const domain = await client.getDomain({ domainName: "example.com" });
+// List all DNS zones (authToken is injected automatically)
+const result = await client.zonesFind({});
+
+if (result.isOk()) {
+  console.log(`Found ${result.value.response.totalEntries} zones`);
+  for (const zone of result.value.response.data) {
+    console.log(`- ${zone.name} (${zone.type})`);
+  }
+}
+
+// With pagination and filtering
+const filtered = await client.zonesFind({
+  limit: 10,
+  page: 1,
+  filter: { field: "name", value: "example.com", relation: "equal" },
+});
 ```
+
+### API Characteristics
+
+> **Important:** The hosting.de API has some unique characteristics:
+>
+> - **POST-only** — All endpoints use POST, even for read operations
+> - **Auth in body** — The `authToken` goes in the request body, not headers
+> - **Wrapped responses** — All responses are wrapped in `{ status, response, metadata }`
+>
+> This client handles all of this automatically!
 
 ---
 
@@ -77,12 +98,17 @@ The client automatically injects the `X-Auth-Token` header on every request.
 
 ## Available Routes
 
-Routes are being implemented incrementally. Currently planned:
+Routes are being implemented incrementally.
 
+### DNS Routes (`@b3-business/hosting.de/routes/dns`)
+
+- [x] `zonesFind` — List DNS zones with filtering/pagination
+
+### Planned
+
+- [ ] **DNS** — Zone create/update/delete, record CRUD
 - [ ] **Domains** — List, get, create, update, delete domains
-- [ ] **DNS** — Zone management, record CRUD
 - [ ] **SSL Certificates** — Order, renew, manage certificates
-- [ ] **Nameservers** — Nameserver configuration
 - [ ] **Contacts** — Contact/handle management
 
 Each route is a separate import — only bundle what you use!
