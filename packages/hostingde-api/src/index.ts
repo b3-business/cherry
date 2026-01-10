@@ -95,4 +95,34 @@ export function createHostingDeClient<Routes extends RouteTree = RouteTree>(
 export type { CherryError, HttpError, ValidationError, NetworkError } from "@b3-business/cherry";
 
 // Routes are exported from separate files
-export * from "./routes/dns";
+export {
+  // Routes
+  zonesFind,
+  zoneConfigsFind,
+  recordsFind,
+  nameserverSetsFind,
+  templatesFind,
+  zoneUpdate,
+  // Schemas (for custom use)
+  DnsRecordSchema,
+  DnsRecordInputSchema,
+  ZoneConfigSchema,
+  ZoneConfigInputSchema,
+  // Types
+  type DnsRecord,
+  type DnsRecordInput,
+  type DnsRecordModify,
+  type ZoneConfig,
+  type ZoneConfigInput,
+  type ZoneWithRecords,
+  type NameserverSet,
+  type Template,
+  type ZonesFindResponse,
+  type ZoneConfigsFindResponse,
+  type RecordsFindResponse,
+  type NameserverSetsFindResponse,
+  type TemplatesFindResponse,
+  type ZoneUpdateResponse,
+  type Filter,
+  type Sort,
+} from "./routes/dns";

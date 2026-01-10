@@ -49,3 +49,7 @@ Developing hosting.de API routes using Cherry.
 - 2026-01-10T02:35Z: Implemented `zonesFind` route with tests (6 pass, 1 skip)
   - Fixed URL construction (trailing slash on baseUrl)
   - Auth injection via custom fetcher
+- 2026-01-10T02:45Z: ✅ Integration test passing with real API!
+  - Fixed schema to match actual response (zoneConfig + records per zone)
+  - Added .gitignore to protect .env
+  - 7 tests passing (6 unit + 1 integration)
