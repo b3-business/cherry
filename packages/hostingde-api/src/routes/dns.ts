@@ -43,32 +43,94 @@ export const SortSchema = v.object({
  */
 export const StatusSchema = v.picklist(["success", "pending", "error"]);
 
+/**
+ * API error object
+ */
+export const ApiErrorSchema = v.object({
+  code: v.number(),
+  contextObject: v.string(),
+  contextPath: v.string(),
+  details: v.array(v.unknown()),
+  text: v.string(),
+  value: v.string(),
+});
+
 // ============================================================================
-// DNS Zone Schemas
+// DNS Record Schema
 // ============================================================================
 
 /**
- * DNS Zone object
+ * DNS Record object
  */
-export const ZoneSchema = v.object({
+export const DnsRecordSchema = v.object({
+  id: v.string(),
+  accountId: v.string(),
+  zoneConfigId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  content: v.string(),
+  ttl: v.number(),
+  priority: v.nullable(v.number()),
+  comments: v.string(),
+  recordTemplateId: v.nullable(v.string()),
+  addDate: v.string(),
+  lastChangeDate: v.string(),
+});
+
+// ============================================================================
+// DNS Zone Config Schema
+// ============================================================================
+
+/**
+ * SOA (Start of Authority) values
+ */
+export const SoaValuesSchema = v.object({
+  refresh: v.number(),
+  retry: v.number(),
+  expire: v.number(),
+  ttl: v.number(),
+  negativeTtl: v.number(),
+});
+
+/**
+ * DNS Zone Config object
+ */
+export const ZoneConfigSchema = v.object({
   id: v.string(),
   accountId: v.string(),
   name: v.string(),
+  nameUnicode: v.string(),
   type: v.string(),
   emailAddress: v.string(),
+  masterIp: v.string(),
+  status: v.string(),
+  dnsSecMode: v.string(),
+  dnsServerGroupId: v.nullable(v.string()),
+  soaValues: SoaValuesSchema,
+  templateValues: v.nullable(v.unknown()),
   zoneTransferWhitelist: v.array(v.string()),
+  restorableUntil: v.nullable(v.string()),
+  addDate: v.string(),
   lastChangeDate: v.string(),
-  // Additional optional fields that may be present
-  masterIp: v.optional(v.string()),
-  comment: v.optional(v.string()),
-  addDate: v.optional(v.string()),
 });
+
+/**
+ * Zone with records (returned by zonesFind)
+ */
+export const ZoneWithRecordsSchema = v.object({
+  zoneConfig: ZoneConfigSchema,
+  records: v.array(DnsRecordSchema),
+});
+
+// ============================================================================
+// zonesFind Response Schema
+// ============================================================================
 
 /**
  * Response data for zonesFind
  */
 export const FindZonesDataSchema = v.object({
-  data: v.array(ZoneSchema),
+  data: v.array(ZoneWithRecordsSchema),
   limit: v.number(),
   page: v.number(),
   totalEntries: v.number(),
@@ -82,6 +144,8 @@ export const FindZonesDataSchema = v.object({
 export const ZonesFindResponseSchema = v.object({
   status: StatusSchema,
   response: FindZonesDataSchema,
+  errors: v.array(ApiErrorSchema),
+  warnings: v.array(ApiErrorSchema),
   metadata: MetadataSchema,
 });
 
@@ -94,6 +158,7 @@ export const ZonesFindResponseSchema = v.object({
  *
  * Lists all DNS zones for the authenticated account.
  * Supports filtering, sorting, and pagination.
+ * Returns zone configs with their DNS records.
  *
  * @example
  * ```ts
@@ -107,8 +172,18 @@ export const ZonesFindResponseSchema = v.object({
  *
  * // With filter
  * const result = await client.zonesFind({
- *   filter: { field: "name", value: "example.com", relation: "equal" }
+ *   filter: { field: "ZoneConfigName", value: "example.com", relation: "equal" }
  * });
+ *
+ * // Access zones and records
+ * if (result.isOk()) {
+ *   for (const zone of result.value.response.data) {
+ *     console.log(zone.zoneConfig.name);
+ *     for (const record of zone.records) {
+ *       console.log(`  ${record.type} ${record.name} -> ${record.content}`);
+ *     }
+ *   }
+ * }
  * ```
  */
 export const zonesFind = route({
@@ -125,7 +200,10 @@ export const zonesFind = route({
 });
 
 // Type exports for consumers
-export type Zone = v.InferOutput<typeof ZoneSchema>;
+export type DnsRecord = v.InferOutput<typeof DnsRecordSchema>;
+export type ZoneConfig = v.InferOutput<typeof ZoneConfigSchema>;
+export type ZoneWithRecords = v.InferOutput<typeof ZoneWithRecordsSchema>;
 export type ZonesFindResponse = v.InferOutput<typeof ZonesFindResponseSchema>;
 export type Filter = v.InferOutput<typeof FilterSchema>;
 export type Sort = v.InferOutput<typeof SortSchema>;
+export type ApiError = v.InferOutput<typeof ApiErrorSchema>;

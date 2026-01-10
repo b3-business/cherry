@@ -1,35 +1,71 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { createHostingDeClient } from "../src/index";
 import { zonesFind, type ZonesFindResponse } from "../src/routes/dns";
+
+// Helper to create a valid mock response
+function createMockResponse(zones: Array<{ name: string; records?: number }>): ZonesFindResponse {
+  return {
+    status: "success",
+    response: {
+      data: zones.map((z, i) => ({
+        zoneConfig: {
+          id: `zone-${i}`,
+          accountId: "acc-123",
+          name: z.name,
+          nameUnicode: z.name,
+          type: "NATIVE",
+          emailAddress: `admin@${z.name}`,
+          masterIp: "",
+          status: "active",
+          dnsSecMode: "off",
+          dnsServerGroupId: null,
+          soaValues: {
+            refresh: 86400,
+            retry: 7200,
+            expire: 3600000,
+            ttl: 86400,
+            negativeTtl: 900,
+          },
+          templateValues: null,
+          zoneTransferWhitelist: [],
+          restorableUntil: null,
+          addDate: "2024-01-01T00:00:00Z",
+          lastChangeDate: "2024-01-01T00:00:00Z",
+        },
+        records: Array.from({ length: z.records ?? 1 }, (_, j) => ({
+          id: `record-${i}-${j}`,
+          accountId: "acc-123",
+          zoneConfigId: `zone-${i}`,
+          name: z.name,
+          type: "A",
+          content: "1.2.3.4",
+          ttl: 300,
+          priority: null,
+          comments: "",
+          recordTemplateId: null,
+          addDate: "2024-01-01T00:00:00Z",
+          lastChangeDate: "2024-01-01T00:00:00Z",
+        })),
+      })),
+      limit: 25,
+      page: 1,
+      totalEntries: zones.length,
+      totalPages: 1,
+      type: "FindZonesResult",
+    },
+    errors: [],
+    warnings: [],
+    metadata: {
+      serverTransactionId: "txn-123",
+    },
+  };
+}
 
 describe("zonesFind route", () => {
   it("should inject authToken into request body", async () => {
     let capturedBody: unknown;
 
-    const mockResponse: ZonesFindResponse = {
-      status: "success",
-      response: {
-        data: [
-          {
-            id: "zone-123",
-            accountId: "acc-456",
-            name: "example.com",
-            type: "NATIVE",
-            emailAddress: "admin@example.com",
-            zoneTransferWhitelist: [],
-            lastChangeDate: "2024-01-01T00:00:00Z",
-          },
-        ],
-        limit: 25,
-        page: 1,
-        totalEntries: 1,
-        totalPages: 1,
-        type: "FindZonesResult",
-      },
-      metadata: {
-        serverTransactionId: "txn-789",
-      },
-    };
+    const mockResponse = createMockResponse([{ name: "example.com" }]);
 
     const client = createHostingDeClient({
       apiToken: "test-secret-token",
@@ -55,27 +91,14 @@ describe("zonesFind route", () => {
     if (result.isOk()) {
       expect(result.value.status).toBe("success");
       expect(result.value.response.data).toHaveLength(1);
-      expect(result.value.response.data[0].name).toBe("example.com");
+      expect(result.value.response.data[0].zoneConfig.name).toBe("example.com");
     }
   });
 
   it("should merge authToken with other body params", async () => {
     let capturedBody: unknown;
 
-    const mockResponse: ZonesFindResponse = {
-      status: "success",
-      response: {
-        data: [],
-        limit: 10,
-        page: 2,
-        totalEntries: 0,
-        totalPages: 0,
-        type: "FindZonesResult",
-      },
-      metadata: {
-        serverTransactionId: "txn-abc",
-      },
-    };
+    const mockResponse = createMockResponse([]);
 
     const client = createHostingDeClient({
       apiToken: "my-token",
@@ -106,20 +129,17 @@ describe("zonesFind route", () => {
 
   it("should use correct endpoint URL", async () => {
     let capturedUrl: string = "";
+    const mockResponse = createMockResponse([]);
 
     const client = createHostingDeClient({
       apiToken: "token",
       routes: { zonesFind },
       fetcher: async (req) => {
         capturedUrl = req.url;
-        return new Response(
-          JSON.stringify({
-            status: "success",
-            response: { data: [], limit: 25, page: 1, totalEntries: 0, totalPages: 0, type: "FindZonesResult" },
-            metadata: { serverTransactionId: "x" },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify(mockResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       },
     });
 
@@ -130,20 +150,17 @@ describe("zonesFind route", () => {
 
   it("should use POST method", async () => {
     let capturedMethod: string = "";
+    const mockResponse = createMockResponse([]);
 
     const client = createHostingDeClient({
       apiToken: "token",
       routes: { zonesFind },
       fetcher: async (req) => {
         capturedMethod = req.init.method ?? "GET";
-        return new Response(
-          JSON.stringify({
-            status: "success",
-            response: { data: [], limit: 25, page: 1, totalEntries: 0, totalPages: 0, type: "FindZonesResult" },
-            metadata: { serverTransactionId: "x" },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify(mockResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       },
     });
 
