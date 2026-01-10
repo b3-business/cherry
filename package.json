@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/cherry",
+    "packages/hostingde-api",
     "examples/*"
   ],
   "scripts": {
