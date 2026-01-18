@@ -3,6 +3,8 @@
 **Generated:** 2026-01-05
 **Branch:** main
 
+IMPORTANT: before you do anything else, run the beans prime command and heed its output.
+
 ## OVERVIEW
 
 Tree-shakeable API client factory with Valibot validation and neverthrow error handling. Routes are plain objects - import only what you use.
