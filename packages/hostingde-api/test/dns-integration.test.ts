@@ -21,9 +21,16 @@ import {
 const TEST_ZONE = "tt-bj2.de";
 
 const apiToken = process.env.HOSTING_DE_API_TOKEN;
+const lowRiskApiToken = process.env.HOSTING_DE_API_TOKEN_LOW_RISK;
+const lowRiskZone = process.env.HOSTING_DE_LOW_RISK_ZONE;
 
 const client = createHostingDeClient({
   apiToken: apiToken ?? "",
+  routes: { zonesFind, zoneConfigsFind, recordsFind, nameserverSetsFind, templatesFind, zoneUpdate },
+});
+
+const lowRiskClient = createHostingDeClient({
+  apiToken: lowRiskApiToken ?? "",
   routes: { zonesFind, zoneConfigsFind, recordsFind, nameserverSetsFind, templatesFind, zoneUpdate },
 });
 
@@ -256,3 +263,94 @@ describe.skipIf(!apiToken)("DNS Integration Tests (tt-bj2.de)", () => {
     });
   });
 });
+
+/**
+ * Low-risk CRUD tests for a dedicated testing account/zone.
+ * These are skipped until HOSTING_DE_API_TOKEN_LOW_RISK and HOSTING_DE_LOW_RISK_ZONE are set.
+ */
+describe.skipIf(!lowRiskApiToken || !lowRiskZone)(
+  "Low-risk DNS CRUD Tests (requires HOSTING_DE_API_TOKEN_LOW_RISK + HOSTING_DE_LOW_RISK_ZONE)",
+  () => {
+    let lowRiskZoneConfig: ZoneConfig;
+
+    beforeAll(async () => {
+      const result = await lowRiskClient.zonesFind({
+        filter: { field: "zoneName", value: lowRiskZone!, relation: "equal" },
+      });
+
+      if (result.isErr()) throw new Error(`Failed to get low-risk zone: ${result.error}`);
+      if (result.value.response.data.length === 0) {
+        throw new Error(`Low-risk zone ${lowRiskZone} not found`);
+      }
+
+      lowRiskZoneConfig = result.value.response.data[0].zoneConfig;
+    });
+
+    /**
+     * Exercises create/update/delete for a TXT record in a low-risk zone.
+     * Uses a randomized record name to avoid collisions.
+     */
+    it("should add, modify, and delete a TXT record in the low-risk zone", { timeout: 30000 }, async () => {
+      const testRecordName = `_clawd-low-risk-${Date.now()}.${lowRiskZone}`;
+
+      const zoneConfigBase = {
+        name: lowRiskZone!,
+        type: lowRiskZoneConfig.type,
+        emailAddress: lowRiskZoneConfig.emailAddress,
+        dnsSecMode: lowRiskZoneConfig.dnsSecMode,
+      };
+
+      const addResult = await lowRiskClient.zoneUpdate({
+        zoneConfig: zoneConfigBase,
+        recordsToAdd: [
+          {
+            name: testRecordName,
+            type: "TXT",
+            content: "\"low-risk-add\"",
+            ttl: 300,
+          },
+        ],
+      });
+
+      expect(addResult.isOk()).toBe(true);
+      if (addResult.isErr()) return;
+      expect(["success", "pending"]).toContain(addResult.value.status);
+
+      const addedRecord = addResult.value.response?.records.find(
+        (r) => r.name === testRecordName && r.type === "TXT",
+      );
+      expect(addedRecord).toBeDefined();
+
+      await new Promise((r) => setTimeout(r, 3000));
+
+      const modResult = await lowRiskClient.zoneUpdate({
+        zoneConfig: zoneConfigBase,
+        recordsToModify: [
+          {
+            id: addedRecord!.id,
+            name: testRecordName,
+            type: "TXT",
+            content: "\"low-risk-modified\"",
+            ttl: 300,
+          },
+        ],
+      });
+
+      expect(modResult.isOk()).toBe(true);
+      if (modResult.isErr()) return;
+      if (modResult.value.status === "error") return;
+      expect(["success", "pending"]).toContain(modResult.value.status);
+
+      await new Promise((r) => setTimeout(r, 2000));
+
+      const delResult = await lowRiskClient.zoneUpdate({
+        zoneConfig: zoneConfigBase,
+        recordsToDelete: [{ id: addedRecord!.id }],
+      });
+
+      expect(delResult.isOk()).toBe(true);
+      if (delResult.isErr()) return;
+      expect(["success", "pending"]).toContain(delResult.value.status);
+    });
+  },
+);

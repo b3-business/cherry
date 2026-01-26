@@ -137,6 +137,18 @@ result.match(
 
 ---
 
+## Testing
+
+Current tests focus on DNS only:
+
+- **Read-only smoke tests** against a real account (requires `HOSTING_DE_API_TOKEN`). These accept empty lists as valid responses to ensure requests are well-formed.
+- **DNS integration tests** that modify records in a main account zone (requires `HOSTING_DE_API_TOKEN` and a configured zone in `packages/hostingde-api/test/dns-integration.test.ts`).
+- **Low-risk CRUD tests** are present but **skipped** until a separate testing account is available (requires `HOSTING_DE_API_TOKEN_LOW_RISK` and `HOSTING_DE_LOW_RISK_ZONE`).
+
+There are no other tests at the moment.
+
+---
+
 ## Contributing
 
 This package is part of the [Cherry monorepo](https://github.com/b3-business/cherry).
