@@ -1,10 +1,10 @@
 # OpenCode Session Documentation
 
-## Session: hostingde-api development
+## Session: hostingde development
 
 **Started:** 2026-01-10T02:25Z  
 **Agent:** JBClawd (Clawdbot)  
-**Project:** `packages/hostingde-api` - hosting.de API client
+**Project:** `hostingde` - hosting.de API client
 
 ## How to Run OpenCode Headless
 
