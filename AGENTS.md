@@ -273,6 +273,7 @@ The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
 ## AGENT NOTES
 
 - **Web search fallback**: If Exa web search fails, use Playwright MCP to navigate and scrape documentation directly
+- **Beans scope**: Do not create beans for pure git operations (e.g. checkout, push, tag)
 - `playground/` is empty - use for API experiments
 - README shows final API design, not current state
 - ARCHITECTURE.md is the source of truth for implementation phases
