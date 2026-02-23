@@ -143,13 +143,14 @@ result.match(
 
 Current tests focus on DNS only:
 
-- **Demo-first policy:** integration and CRUD tests run against the demo environment (`https://demo.hosting.de/`).
+- **All live tests use one dedicated test account token:** `HOSTING_DE_API_TOKEN_TEST1`
+- Integration tests are **self-contained**: each test creates and cleans up its own temporary DNS zone
+- No preconfigured zone variable is needed
+- API hosts are configurable via environment variables:
+  - `HOSTINGDE_API_DEMO_HOST` (default derived from `https://demo.hosting.de/` => `demo.hosting.de`)
+  - `HOSTINGDE_API_HOST` (default: `secure.hosting.de`)
+- Demo test system: `https://demo.hosting.de/`
   - Register test users at `https://demo.hosting.de/signup/`
-- **Demo integration tests** require:
-  - `HOSTING_DE_API_TOKEN_DEMO`
-  - `HOSTING_DE_DEMO_ZONE`
-  - (backward-compatible fallbacks: `HOSTING_DE_API_TOKEN_LOW_RISK`, `HOSTING_DE_LOW_RISK_ZONE`)
-- **Real-account smoke tests** are read-only only, and use `HOSTING_DE_API_TOKEN`.
 
 There are no other tests at the moment.
 

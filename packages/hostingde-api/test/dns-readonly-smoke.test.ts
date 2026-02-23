@@ -1,7 +1,7 @@
 /**
  * DNS Read-only Smoke Tests
  *
- * Validates request/response wiring with real API calls without modifying data.
+ * Validates request/response wiring with live API calls without modifying data.
  * Empty lists are acceptable and still count as a successful smoke test.
  */
 
@@ -14,11 +14,13 @@ import {
   nameserverSetsFind,
   templatesFind,
 } from "../src/routes/dns";
+import { hostingDeDemoApiBaseUrl, hostingDeTest1ApiToken } from "./utils/test-env";
 
-const apiToken = process.env.HOSTING_DE_API_TOKEN;
+const apiToken = hostingDeTest1ApiToken;
 
 const client = createHostingDeClient({
   apiToken: apiToken ?? "",
+  baseUrl: hostingDeDemoApiBaseUrl,
   routes: { zonesFind, zoneConfigsFind, recordsFind, nameserverSetsFind, templatesFind },
 });
 
@@ -27,10 +29,10 @@ const NONEXISTENT_ZONE = `clawd-smoke-${Date.now()}-${Math.random()
   .slice(2)}.invalid`;
 
 /**
- * Read-only smoke tests against a real account.
+ * Read-only smoke tests against the dedicated TEST1 account.
  * Ensures input validation does not reject well-formed requests.
  */
-describe.skipIf(!apiToken)("DNS Read-only Smoke Tests (real account)", () => {
+describe.skipIf(!apiToken)("DNS Read-only Smoke Tests (HOSTING_DE_API_TOKEN_TEST1)", () => {
   /**
    * Confirms filtering by a non-existent zone returns a valid empty list.
    * Guards against malformed input errors.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { createHostingDeClient } from "../src/index";
 import { zonesFind, type ZonesFindResponse } from "../src/routes/dns";
+import { hostingDeDemoApiBaseUrl, hostingDeTest1ApiToken } from "./utils/test-env";
 
 // Helper to create a valid mock response
 function createMockResponse(zones: Array<{ name: string; records?: number }>): ZonesFindResponse {
@@ -170,12 +171,13 @@ describe("zonesFind route", () => {
   });
 });
 
-describe("integration test (requires HOSTING_DE_API_TOKEN)", () => {
-  const apiToken = process.env.HOSTING_DE_API_TOKEN;
+describe("integration test (requires HOSTING_DE_API_TOKEN_TEST1)", () => {
+  const apiToken = hostingDeTest1ApiToken;
 
-  it.skipIf(!apiToken)("should fetch real zones from hosting.de", async () => {
+  it.skipIf(!apiToken)("should fetch zones from hosting.de test1 account", async () => {
     const client = createHostingDeClient({
       apiToken: apiToken!,
+      baseUrl: hostingDeDemoApiBaseUrl,
       routes: { zonesFind },
     });
 

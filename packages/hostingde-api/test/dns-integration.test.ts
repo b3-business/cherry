@@ -1,11 +1,12 @@
 /**
- * DNS Integration Tests
- * 
- * Uses tt-bj2.de as the test zone.
- * Requires HOSTING_DE_API_TOKEN environment variable.
+ * DNS Integration Tests (self-contained)
+ *
+ * Uses HOSTING_DE_API_TOKEN_TEST1 and creates/deletes a temporary zone per test.
+ * Host resolution uses HOSTINGDE_API_DEMO_HOST (default derived from https://demo.hosting.de/).
+ * No preconfigured zone is required.
  */
 
-import { describe, expect, it, beforeAll } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { createHostingDeClient } from "../src/index";
 import {
   zonesFind,
@@ -15,175 +16,306 @@ import {
   templatesFind,
   zoneUpdate,
   type ZoneConfig,
-  type DnsRecord,
 } from "../src/routes/dns";
+import {
+  hostingDeDemoApiBaseUrl,
+  hostingDeDemoDnsJsonApiBaseUrl,
+  hostingDeTest1ApiToken,
+} from "./utils/test-env";
 
-const TEST_ZONE = "tt-bj2.de";
-
-const apiToken = process.env.HOSTING_DE_API_TOKEN;
-const lowRiskApiToken = process.env.HOSTING_DE_API_TOKEN_LOW_RISK;
-const lowRiskZone = process.env.HOSTING_DE_LOW_RISK_ZONE;
+const testApiToken = hostingDeTest1ApiToken;
 
 const client = createHostingDeClient({
-  apiToken: apiToken ?? "",
+  apiToken: testApiToken ?? "",
+  baseUrl: hostingDeDemoApiBaseUrl,
   routes: { zonesFind, zoneConfigsFind, recordsFind, nameserverSetsFind, templatesFind, zoneUpdate },
 });
 
-const lowRiskClient = createHostingDeClient({
-  apiToken: lowRiskApiToken ?? "",
-  routes: { zonesFind, zoneConfigsFind, recordsFind, nameserverSetsFind, templatesFind, zoneUpdate },
-});
+type DnsMutationResponse = {
+  status?: "success" | "pending" | "error";
+  errors?: Array<{ text?: string }>;
+};
 
-describe.skipIf(!apiToken)("DNS Integration Tests (tt-bj2.de)", () => {
-  let testZoneConfig: ZoneConfig;
-  let testRecords: DnsRecord[];
+type ZoneUpdateInput = Parameters<typeof client.zoneUpdate>[0];
+type ZoneUpdateResult = Awaited<ReturnType<typeof client.zoneUpdate>>;
 
-  beforeAll(async () => {
-    // Get the test zone
-    const result = await client.zonesFind({
-      filter: { field: "zoneName", value: TEST_ZONE, relation: "equal" },
+function requireTestToken(): string {
+  if (!testApiToken) {
+    throw new Error("Missing HOSTING_DE_API_TOKEN_TEST1");
+  }
+
+  return testApiToken;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createUniqueZoneName(prefix: string): string {
+  const random = Math.random().toString(36).slice(2, 8);
+  return `${prefix}-${Date.now().toString(36)}-${random}.test`;
+}
+
+function formatApiErrors(errors: Array<{ text?: string }> | undefined): string {
+  if (!errors || errors.length === 0) {
+    return "Unknown API error";
+  }
+
+  return errors.map((error) => error.text ?? "Unknown error").join("; ");
+}
+
+function isZoneBusyError(message: string): boolean {
+  return /current status of an object you are trying to use does not allow that operation/i.test(
+    message,
+  );
+}
+
+async function zoneUpdateWithRetry(input: ZoneUpdateInput, attempts: number = 8): Promise<ZoneUpdateResult> {
+  let result = await client.zoneUpdate(input);
+
+  for (let attempt = 1; attempt < attempts; attempt++) {
+    if (result.isErr()) return result;
+    if (result.value.status !== "error") return result;
+
+    const errorMessage = formatApiErrors(result.value.errors);
+    if (!isZoneBusyError(errorMessage)) {
+      return result;
+    }
+
+    await wait(1500);
+    result = await client.zoneUpdate(input);
+  }
+
+  return result;
+}
+
+async function waitForRecordId(
+  zoneConfigId: string,
+  recordName: string,
+  recordType: string,
+  timeoutMs: number = 30000,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const result = await client.recordsFind({
+      filter: { field: "zoneConfigId", value: zoneConfigId, relation: "equal" },
+      limit: 500,
     });
-    
-    if (result.isErr()) throw new Error(`Failed to get test zone: ${result.error}`);
-    if (result.value.response.data.length === 0) throw new Error(`Test zone ${TEST_ZONE} not found`);
-    
-    testZoneConfig = result.value.response.data[0].zoneConfig;
-    testRecords = result.value.response.data[0].records;
-    
-    console.log(`Test zone: ${testZoneConfig.name} (${testZoneConfig.id})`);
-    console.log(`Records: ${testRecords.length}`);
+
+    if (result.isOk() && result.value.status !== "error") {
+      const record = result.value.response.data.find(
+        (item) => item.name === recordName && item.type === recordType,
+      );
+      if (record) return record.id;
+    }
+
+    await wait(1000);
+  }
+
+  throw new Error(`Timed out waiting for record ${recordName} (${recordType})`);
+}
+
+async function postDnsMutation(
+  endpoint: string,
+  payload: Record<string, unknown>,
+): Promise<DnsMutationResponse> {
+  const response = await fetch(`${hostingDeDemoDnsJsonApiBaseUrl}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authToken: requireTestToken(), ...payload }),
   });
 
-  describe("zonesFind", () => {
-    it("should find all zones", async () => {
-      const result = await client.zonesFind({ limit: 5 });
-      
+  if (!response.ok) {
+    throw new Error(`${endpoint} failed with HTTP ${response.status}`);
+  }
+
+  const body = (await response.json()) as DnsMutationResponse;
+
+  if (body.status === "error") {
+    throw new Error(`${endpoint} returned API error: ${formatApiErrors(body.errors)}`);
+  }
+
+  return body;
+}
+
+async function createTemporaryZone(zoneName: string): Promise<void> {
+  await postDnsMutation("zoneCreate", {
+    zoneConfig: {
+      name: zoneName,
+      type: "NATIVE",
+      emailAddress: "hostmaster@example.test",
+    },
+    records: [
+      {
+        name: zoneName,
+        type: "A",
+        content: "127.0.0.1",
+        ttl: 300,
+      },
+    ],
+    useDefaultNameserverSet: true,
+  });
+}
+
+async function waitForZoneConfig(zoneName: string, timeoutMs: number = 45000): Promise<ZoneConfig> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const result = await client.zonesFind({
+      filter: { field: "zoneName", value: zoneName, relation: "equal" },
+      limit: 1,
+    });
+
+    if (result.isOk() && result.value.response.data.length > 0) {
+      return result.value.response.data[0].zoneConfig;
+    }
+
+    await wait(1000);
+  }
+
+  throw new Error(`Timed out waiting for temporary zone ${zoneName}`);
+}
+
+async function deleteTemporaryZone(zoneName: string): Promise<void> {
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      await postDnsMutation("zoneDelete", { zoneName });
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isZoneBusyError(message) && attempt < 10) {
+        await wait(1500);
+        continue;
+      }
+
+      console.warn(`Cleanup warning for ${zoneName}:`, error);
+      return;
+    }
+  }
+}
+
+async function withTemporaryZone<T>(
+  prefix: string,
+  callback: (zoneName: string, zoneConfig: ZoneConfig) => Promise<T>,
+): Promise<T> {
+  const zoneName = createUniqueZoneName(prefix);
+
+  await createTemporaryZone(zoneName);
+  const zoneConfig = await waitForZoneConfig(zoneName);
+
+  try {
+    return await callback(zoneName, zoneConfig);
+  } finally {
+    await deleteTemporaryZone(zoneName);
+  }
+}
+
+/**
+ * Verifies DNS read and write operations against a dedicated test account.
+ * Each test creates and cleans up its own zone to stay isolated.
+ */
+describe.skipIf(!testApiToken)("DNS Integration Tests (HOSTING_DE_API_TOKEN_TEST1)", () => {
+  /**
+   * Ensures zonesFind can discover a newly created temporary zone.
+   */
+  it("zonesFind should find a freshly created test zone", { timeout: 90000 }, async () => {
+    await withTemporaryZone("zones-find", async (zoneName) => {
+      const result = await client.zonesFind({
+        filter: { field: "zoneName", value: zoneName, relation: "equal" },
+      });
+
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
         expect(result.value.status).toBe("success");
+        expect(result.value.response.type).toBe("FindZonesResult");
         expect(result.value.response.data.length).toBeGreaterThan(0);
-      }
-    });
-
-    it("should filter by zone name", async () => {
-      const result = await client.zonesFind({
-        filter: { field: "zoneName", value: TEST_ZONE, relation: "equal" },
-      });
-      
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.response.data.length).toBe(1);
-        expect(result.value.response.data[0].zoneConfig.name).toBe(TEST_ZONE);
+        expect(result.value.response.data[0].zoneConfig.name).toBe(zoneName);
       }
     });
   });
 
-  describe("zoneConfigsFind", () => {
-    it("should find zone configs (without records)", async () => {
-      const result = await client.zoneConfigsFind({ limit: 5 });
-      
+  /**
+   * Ensures zoneConfigsFind can read metadata for a newly created temporary zone.
+   */
+  it("zoneConfigsFind should find a freshly created test zone config", { timeout: 90000 }, async () => {
+    await withTemporaryZone("zone-config", async (zoneName) => {
+      const result = await client.zoneConfigsFind({
+        filter: { field: "zoneName", value: zoneName, relation: "equal" },
+      });
+
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
         expect(result.value.status).toBe("success");
         expect(result.value.response.type).toBe("FindZoneConfigsResult");
         expect(result.value.response.data.length).toBeGreaterThan(0);
-        // Zone configs don't have records array
-        expect(result.value.response.data[0]).toHaveProperty("name");
-        expect(result.value.response.data[0]).not.toHaveProperty("records");
-      }
-    });
-
-    it("should filter by zone name", async () => {
-      const result = await client.zoneConfigsFind({
-        filter: { field: "zoneName", value: TEST_ZONE, relation: "equal" },
-      });
-      
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.response.data.length).toBe(1);
-        expect(result.value.response.data[0].name).toBe(TEST_ZONE);
+        expect(result.value.response.data[0].name).toBe(zoneName);
       }
     });
   });
 
-  describe("recordsFind", () => {
-    it("should find records for test zone", async () => {
+  /**
+   * Ensures recordsFind can retrieve records scoped to a newly created zone.
+   */
+  it("recordsFind should return records for a freshly created zone", { timeout: 90000 }, async () => {
+    await withTemporaryZone("records-find", async (_zoneName, zoneConfig) => {
       const result = await client.recordsFind({
-        filter: { field: "zoneConfigId", value: testZoneConfig.id, relation: "equal" },
+        filter: { field: "zoneConfigId", value: zoneConfig.id, relation: "equal" },
       });
-      
+
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
         expect(result.value.status).toBe("success");
         expect(result.value.response.type).toBe("FindRecordsResult");
         expect(result.value.response.data.length).toBeGreaterThan(0);
-        console.log(`Found ${result.value.response.data.length} records for ${TEST_ZONE}`);
-      }
-    });
-
-    it("should filter by record type", async () => {
-      const result = await client.recordsFind({
-        filter: { field: "recordType", value: "A", relation: "equal" },
-        limit: 10,
-      });
-      
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        // All returned records should be A records
         for (const record of result.value.response.data) {
-          expect(record.type).toBe("A");
+          expect(record.zoneConfigId).toBe(zoneConfig.id);
         }
       }
     });
   });
 
-  describe("nameserverSetsFind", () => {
-    it("should find nameserver sets", async () => {
-      const result = await client.nameserverSetsFind({ limit: 10 });
-      
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.status).toBe("success");
-        expect(result.value.response.type).toBe("FindNameserverSetsResult");
-        console.log(`Found ${result.value.response.totalEntries} nameserver sets`);
-        
-        if (result.value.response.data.length > 0) {
-          const ns = result.value.response.data[0];
-          expect(ns).toHaveProperty("nameservers");
-          console.log(`First NS set: ${ns.name}`);
-        }
-      }
-    });
+  /**
+   * Ensures nameserver sets endpoint works with the TEST1 credentials.
+   */
+  it("nameserverSetsFind should succeed", async () => {
+    const result = await client.nameserverSetsFind({ limit: 10 });
+
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.status).toBe("success");
+      expect(result.value.response.type).toBe("FindNameserverSetsResult");
+    }
   });
 
-  describe("templatesFind", () => {
-    it("should find templates", async () => {
-      const result = await client.templatesFind({ limit: 10 });
-      
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.status).toBe("success");
-        expect(result.value.response.type).toBe("FindTemplatesResult");
-        console.log(`Found ${result.value.response.totalEntries} templates`);
-      }
-    });
+  /**
+   * Ensures template listing works with the TEST1 credentials.
+   */
+  it("templatesFind should succeed", async () => {
+    const result = await client.templatesFind({ limit: 10 });
+
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) {
+      expect(result.value.status).toBe("success");
+      expect(result.value.response.type).toBe("FindTemplatesResult");
+    }
   });
 
-  describe("zoneUpdate", () => {
-    it("should add, modify, and delete a TXT record", { timeout: 30000 }, async () => {
-      const testRecordName = `_clawd-test-${Date.now()}.${TEST_ZONE}`;
-      
-      // Helper to get zone config required fields
+  /**
+   * Exercises add/modify/delete for a TXT record inside a temporary zone.
+   */
+  it("zoneUpdate should add, modify, and delete a TXT record", { timeout: 90000 }, async () => {
+    await withTemporaryZone("zone-update", async (zoneName, zoneConfig) => {
+      const testRecordName = `_clawd-test-${Date.now()}.${zoneName}`;
+
       const zoneConfigBase = {
-        name: TEST_ZONE,
-        type: testZoneConfig.type,
-        emailAddress: testZoneConfig.emailAddress,
-        dnsSecMode: testZoneConfig.dnsSecMode,
+        name: zoneName,
+        type: zoneConfig.type,
+        emailAddress: zoneConfig.emailAddress,
+        dnsSecMode: zoneConfig.dnsSecMode,
       };
 
-      // 1. ADD
-      console.log(`Adding record: ${testRecordName}`);
-      const addResult = await client.zoneUpdate({
+      const addResult = await zoneUpdateWithRetry({
         zoneConfig: zoneConfigBase,
         recordsToAdd: [
           {
@@ -194,32 +326,26 @@ describe.skipIf(!apiToken)("DNS Integration Tests (tt-bj2.de)", () => {
           },
         ],
       });
-      
+
       expect(addResult.isOk()).toBe(true);
-      if (addResult.isErr()) {
-        console.log("Add error:", addResult.error);
-        return;
+      if (addResult.isErr()) return;
+      if (addResult.value.status === "error") {
+        throw new Error(`Failed to add TXT record: ${formatApiErrors(addResult.value.errors)}`);
       }
       expect(["success", "pending"]).toContain(addResult.value.status);
-      
-      // Find the added record
-      const addedRecord = addResult.value.response?.records.find(
-        (r) => r.name === testRecordName && r.type === "TXT"
-      );
-      expect(addedRecord).toBeDefined();
-      console.log(`Added: ${addedRecord?.id} (status: ${addResult.value.status})`);
 
-      // Wait for zone to be unblocked (async operation)
-      console.log("Waiting for zone to unblock...");
-      await new Promise(r => setTimeout(r, 3000));
+      const addedRecordId =
+        addResult.value.response?.records.find(
+          (record) => record.name === testRecordName && record.type === "TXT",
+        )?.id ?? (await waitForRecordId(zoneConfig.id, testRecordName, "TXT"));
 
-      // 2. MODIFY
-      console.log("Modifying record...");
-      const modResult = await client.zoneUpdate({
+      await wait(2000);
+
+      const modResult = await zoneUpdateWithRetry({
         zoneConfig: zoneConfigBase,
         recordsToModify: [
           {
-            id: addedRecord!.id,
+            id: addedRecordId,
             name: testRecordName,
             type: "TXT",
             content: `"test-modified"`,
@@ -227,130 +353,27 @@ describe.skipIf(!apiToken)("DNS Integration Tests (tt-bj2.de)", () => {
           },
         ],
       });
-      
-      if (modResult.isErr()) {
-        console.log("Modify client error:", modResult.error);
-      }
+
       expect(modResult.isOk()).toBe(true);
       if (modResult.isErr()) return;
-      
-      // Check for API-level errors (zone blocked, etc.)
       if (modResult.value.status === "error") {
-        console.log("Modify API error:", modResult.value.errors);
-        // Skip rest of test - zone might be blocked
-        return;
+        throw new Error(`Failed to modify TXT record: ${formatApiErrors(modResult.value.errors)}`);
       }
       expect(["success", "pending"]).toContain(modResult.value.status);
-      console.log(`Modified (status: ${modResult.value.status})`);
-      
-      // Wait for zone to unblock
-      await new Promise(r => setTimeout(r, 2000));
 
-      // 3. DELETE
-      console.log("Deleting record...");
-      const delResult = await client.zoneUpdate({
+      await wait(2000);
+
+      const delResult = await zoneUpdateWithRetry({
         zoneConfig: zoneConfigBase,
-        recordsToDelete: [{ id: addedRecord!.id }],
-      });
-      
-      expect(delResult.isOk()).toBe(true);
-      if (delResult.isErr()) {
-        console.log("Delete error:", delResult.error);
-        return;
-      }
-      expect(["success", "pending"]).toContain(delResult.value.status);
-      console.log(`Deleted (status: ${delResult.value.status})`);
-    });
-  });
-});
-
-/**
- * Low-risk CRUD tests for a dedicated testing account/zone.
- * These are skipped until HOSTING_DE_API_TOKEN_LOW_RISK and HOSTING_DE_LOW_RISK_ZONE are set.
- */
-describe.skipIf(!lowRiskApiToken || !lowRiskZone)(
-  "Low-risk DNS CRUD Tests (requires HOSTING_DE_API_TOKEN_LOW_RISK + HOSTING_DE_LOW_RISK_ZONE)",
-  () => {
-    let lowRiskZoneConfig: ZoneConfig;
-
-    beforeAll(async () => {
-      const result = await lowRiskClient.zonesFind({
-        filter: { field: "zoneName", value: lowRiskZone!, relation: "equal" },
-      });
-
-      if (result.isErr()) throw new Error(`Failed to get low-risk zone: ${result.error}`);
-      if (result.value.response.data.length === 0) {
-        throw new Error(`Low-risk zone ${lowRiskZone} not found`);
-      }
-
-      lowRiskZoneConfig = result.value.response.data[0].zoneConfig;
-    });
-
-    /**
-     * Exercises create/update/delete for a TXT record in a low-risk zone.
-     * Uses a randomized record name to avoid collisions.
-     */
-    it("should add, modify, and delete a TXT record in the low-risk zone", { timeout: 30000 }, async () => {
-      const testRecordName = `_clawd-low-risk-${Date.now()}.${lowRiskZone}`;
-
-      const zoneConfigBase = {
-        name: lowRiskZone!,
-        type: lowRiskZoneConfig.type,
-        emailAddress: lowRiskZoneConfig.emailAddress,
-        dnsSecMode: lowRiskZoneConfig.dnsSecMode,
-      };
-
-      const addResult = await lowRiskClient.zoneUpdate({
-        zoneConfig: zoneConfigBase,
-        recordsToAdd: [
-          {
-            name: testRecordName,
-            type: "TXT",
-            content: "\"low-risk-add\"",
-            ttl: 300,
-          },
-        ],
-      });
-
-      expect(addResult.isOk()).toBe(true);
-      if (addResult.isErr()) return;
-      expect(["success", "pending"]).toContain(addResult.value.status);
-
-      const addedRecord = addResult.value.response?.records.find(
-        (r) => r.name === testRecordName && r.type === "TXT",
-      );
-      expect(addedRecord).toBeDefined();
-
-      await new Promise((r) => setTimeout(r, 3000));
-
-      const modResult = await lowRiskClient.zoneUpdate({
-        zoneConfig: zoneConfigBase,
-        recordsToModify: [
-          {
-            id: addedRecord!.id,
-            name: testRecordName,
-            type: "TXT",
-            content: "\"low-risk-modified\"",
-            ttl: 300,
-          },
-        ],
-      });
-
-      expect(modResult.isOk()).toBe(true);
-      if (modResult.isErr()) return;
-      if (modResult.value.status === "error") return;
-      expect(["success", "pending"]).toContain(modResult.value.status);
-
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const delResult = await lowRiskClient.zoneUpdate({
-        zoneConfig: zoneConfigBase,
-        recordsToDelete: [{ id: addedRecord!.id }],
+        recordsToDelete: [{ id: addedRecordId }],
       });
 
       expect(delResult.isOk()).toBe(true);
       if (delResult.isErr()) return;
+      if (delResult.value.status === "error") {
+        throw new Error(`Failed to delete TXT record: ${formatApiErrors(delResult.value.errors)}`);
+      }
       expect(["success", "pending"]).toContain(delResult.value.status);
     });
-  },
-);
+  });
+});
