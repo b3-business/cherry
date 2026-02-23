@@ -13,7 +13,13 @@ import type {
   RoutesToClient,
   QueryParamOptions,
 } from "./types";
-import { HttpError, ValidationError, NetworkError, SerializationError, UnknownCherryError } from "./errors";
+import {
+  HttpError,
+  ValidationError,
+  NetworkError,
+  SerializationError,
+  UnknownCherryError,
+} from "./errors";
 
 const defaultFetcher: Fetcher = (req) => fetch(req.url, req.init);
 

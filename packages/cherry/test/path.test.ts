@@ -1,6 +1,13 @@
 import { describe, it, expect } from "bun:test";
 import { expectTypeOf } from "expect-type";
-import { path, param, optional, type PathParam, type OptionalParam, type AnyPathParam } from "../src/path";
+import {
+  path,
+  param,
+  optional,
+  type PathParam,
+  type OptionalParam,
+  type AnyPathParam,
+} from "../src/path";
 import type { PathTemplate } from "../src/types";
 
 /**

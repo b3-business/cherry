@@ -20,7 +20,10 @@
   "scripts": {
     "build": "tsdown",
     "check": "oxlint --type-aware --type-check src test",
-    "typecheck": "tsc --noEmit -p .",
+    "format": "oxfmt --write src test",
+    "format:check": "oxfmt --check src test",
+    "typecheck": "tsgo --noEmit -p .",
+    "typecheck:tsc": "tsc --noEmit -p .",
     "test": "bun test",
     "prepublishOnly": "npm run check && npm run test && npm run build",
     "dry-npm": "npm publish --dry-run --access public",

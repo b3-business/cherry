@@ -233,8 +233,7 @@ describe("Integration: neverthrow patterns", () => {
    * match(): Handle 404 with fallback value.
    */
   it("uses match for fallback on 404", async () => {
-    const mockFetcher: Fetcher = async () =>
-      new Response("Not Found", { status: 404 });
+    const mockFetcher: Fetcher = async () => new Response("Not Found", { status: 404 });
 
     const client = createCherryClient({
       baseUrl: "https://api.example.com",
@@ -291,9 +290,7 @@ describe("Integration: neverthrow patterns", () => {
     const result = await client
       .call(getUser, { id: "1" })
       .andThen((user) =>
-        client
-          .call(getUserPosts, { userId: user.id })
-          .map((posts) => ({ user, posts })),
+        client.call(getUserPosts, { userId: user.id }).map((posts) => ({ user, posts })),
       );
 
     expect(result.isOk()).toBe(true);
