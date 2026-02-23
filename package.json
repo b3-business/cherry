@@ -2,12 +2,14 @@
   "name": "@b3b/cherry-monorepo",
   "private": true,
   "workspaces": [
-    "packages/cherry",
-    "examples/*"
+    "packages/*"
   ],
   "scripts": {
     "check": "bun run --filter '*' check",
     "test": "bun run --filter '*' test",
+    "test:jsonplaceholder": "bun run --filter @b3b/cherry-example-jsonplaceholder test",
+    "test:pokeapi": "bun run --filter @b3b/cherry-example-pokeapi test",
+    "test:examples": "bun run test:jsonplaceholder && bun run test:pokeapi",
     "test:prod": "bun run scripts/test-examples-prod.bun.ts"
   },
   "devDependencies": {
