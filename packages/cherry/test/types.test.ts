@@ -90,7 +90,7 @@ describe("QueryParamOptions", () => {
     const options: QueryParamOptions = {
       customSerializer: (params) =>
         Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
+          .map(([k, v]) => `${k}=${String(v)}`)
           .join("&"),
     };
     // Assert customSerializer is defined before type checks
