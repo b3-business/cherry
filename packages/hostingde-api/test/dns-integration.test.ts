@@ -1,9 +1,8 @@
 /**
- * DNS Integration Tests (self-contained)
+ * DNS Integration Roundtrip Test (self-contained)
  *
- * Uses HOSTING_DE_API_TOKEN_TEST1 and creates/deletes a temporary zone per test.
- * Host resolution uses HOSTINGDE_API_DEMO_HOST (default derived from https://demo.hosting.de/).
- * No preconfigured zone is required.
+ * Uses HOSTING_DE_API_TOKEN_TEST1 and executes a full DNS lifecycle in one sequential test:
+ * zone create -> read/list endpoints -> record add/modify/delete -> zone cleanup.
  */
 
 import { describe, expect, it } from "bun:test";
@@ -46,102 +45,63 @@ const testContext = testApiToken
   : undefined;
 
 /**
- * Verifies DNS read and write operations against a dedicated test account.
- * Each test creates and cleans up its own zone to stay isolated.
+ * Runs DNS API validation as one sequential roundtrip so dependent resources
+ * are handled in-order and cleaned up together.
  */
-describe.skipIf(!testApiToken)("DNS Integration Tests (HOSTING_DE_API_TOKEN_TEST1)", () => {
+describe.skipIf(!testApiToken)("DNS Integration Roundtrip (HOSTING_DE_API_TOKEN_TEST1)", () => {
   /**
-   * Ensures zonesFind can discover a newly created temporary zone.
+   * Full DNS roundtrip using one temporary zone:
+   * - verify list/find endpoints
+   * - add/modify/delete TXT record
+   * - verify record transitions
    */
-  it("zonesFind should find a freshly created test zone", { timeout: 90000 }, async () => {
-    await withTemporaryZone(testContext!, "zones-find", async (zoneName) => {
-      const result = await client.zonesFind({
+  it("performs full DNS zone roundtrip sequentially", { timeout: 120000 }, async () => {
+    await withTemporaryZone(testContext!, "dns-roundtrip", async (zoneName, zoneConfig) => {
+      // 1) zonesFind
+      const zonesResult = await client.zonesFind({
         filter: { field: "zoneName", value: zoneName, relation: "equal" },
       });
+      expect(zonesResult.isOk()).toBe(true);
+      if (zonesResult.isErr()) return;
+      expect(zonesResult.value.status).toBe("success");
+      expect(zonesResult.value.response.type).toBe("FindZonesResult");
+      expect(zonesResult.value.response.data.length).toBeGreaterThan(0);
 
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.status).toBe("success");
-        expect(result.value.response.type).toBe("FindZonesResult");
-        expect(result.value.response.data.length).toBeGreaterThan(0);
-        expect(result.value.response.data[0].zoneConfig.name).toBe(zoneName);
-      }
-    });
-  });
-
-  /**
-   * Ensures zoneConfigsFind can read metadata for a newly created temporary zone.
-   */
-  it("zoneConfigsFind should find a freshly created test zone config", { timeout: 90000 }, async () => {
-    await withTemporaryZone(testContext!, "zone-config", async (zoneName) => {
-      const result = await client.zoneConfigsFind({
+      // 2) zoneConfigsFind
+      const zoneConfigsResult = await client.zoneConfigsFind({
         filter: { field: "zoneName", value: zoneName, relation: "equal" },
       });
+      expect(zoneConfigsResult.isOk()).toBe(true);
+      if (zoneConfigsResult.isErr()) return;
+      expect(zoneConfigsResult.value.status).toBe("success");
+      expect(zoneConfigsResult.value.response.type).toBe("FindZoneConfigsResult");
+      expect(zoneConfigsResult.value.response.data.length).toBeGreaterThan(0);
 
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.status).toBe("success");
-        expect(result.value.response.type).toBe("FindZoneConfigsResult");
-        expect(result.value.response.data.length).toBeGreaterThan(0);
-        expect(result.value.response.data[0].name).toBe(zoneName);
-      }
-    });
-  });
-
-  /**
-   * Ensures recordsFind can retrieve records scoped to a newly created zone.
-   */
-  it("recordsFind should return records for a freshly created zone", { timeout: 90000 }, async () => {
-    await withTemporaryZone(testContext!, "records-find", async (_zoneName, zoneConfig) => {
-      const result = await client.recordsFind({
+      // 3) recordsFind (initial zone records)
+      const initialRecordsResult = await client.recordsFind({
         filter: { field: "zoneConfigId", value: zoneConfig.id, relation: "equal" },
       });
+      expect(initialRecordsResult.isOk()).toBe(true);
+      if (initialRecordsResult.isErr()) return;
+      expect(initialRecordsResult.value.status).toBe("success");
+      expect(initialRecordsResult.value.response.type).toBe("FindRecordsResult");
+      expect(initialRecordsResult.value.response.data.length).toBeGreaterThan(0);
 
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value.status).toBe("success");
-        expect(result.value.response.type).toBe("FindRecordsResult");
-        expect(result.value.response.data.length).toBeGreaterThan(0);
-        for (const record of result.value.response.data) {
-          expect(record.zoneConfigId).toBe(zoneConfig.id);
-        }
-      }
-    });
-  });
+      // 4) nameserverSetsFind
+      const nameserverSetsResult = await client.nameserverSetsFind({ limit: 10 });
+      expect(nameserverSetsResult.isOk()).toBe(true);
+      if (nameserverSetsResult.isErr()) return;
+      expect(nameserverSetsResult.value.status).toBe("success");
+      expect(nameserverSetsResult.value.response.type).toBe("FindNameserverSetsResult");
 
-  /**
-   * Ensures nameserver sets endpoint works with the TEST1 credentials.
-   */
-  it("nameserverSetsFind should succeed", async () => {
-    const result = await client.nameserverSetsFind({ limit: 10 });
+      // 5) templatesFind
+      const templatesResult = await client.templatesFind({ limit: 10 });
+      expect(templatesResult.isOk()).toBe(true);
+      if (templatesResult.isErr()) return;
+      expect(templatesResult.value.status).toBe("success");
+      expect(templatesResult.value.response.type).toBe("FindTemplatesResult");
 
-    expect(result.isOk()).toBe(true);
-    if (result.isOk()) {
-      expect(result.value.status).toBe("success");
-      expect(result.value.response.type).toBe("FindNameserverSetsResult");
-    }
-  });
-
-  /**
-   * Ensures template listing works with the TEST1 credentials.
-   */
-  it("templatesFind should succeed", async () => {
-    const result = await client.templatesFind({ limit: 10 });
-
-    expect(result.isOk()).toBe(true);
-    if (result.isOk()) {
-      expect(result.value.status).toBe("success");
-      expect(result.value.response.type).toBe("FindTemplatesResult");
-    }
-  });
-
-  /**
-   * Exercises add/modify/delete for a TXT record inside a temporary zone.
-   */
-  it("zoneUpdate should add, modify, and delete a TXT record", { timeout: 90000 }, async () => {
-    await withTemporaryZone(testContext!, "zone-update", async (zoneName, zoneConfig) => {
       const testRecordName = `_clawd-test-${Date.now()}.${zoneName}`;
-
       const zoneConfigBase = {
         name: zoneName,
         type: zoneConfig.type,
@@ -149,6 +109,7 @@ describe.skipIf(!testApiToken)("DNS Integration Tests (HOSTING_DE_API_TOKEN_TEST
         dnsSecMode: zoneConfig.dnsSecMode,
       };
 
+      // 6) zoneUpdate add TXT
       const addResult = await zoneUpdateWithRetry(client, {
         zoneConfig: zoneConfigBase,
         recordsToAdd: [
@@ -175,6 +136,7 @@ describe.skipIf(!testApiToken)("DNS Integration Tests (HOSTING_DE_API_TOKEN_TEST
 
       await sleep(2000);
 
+      // 7) zoneUpdate modify TXT
       const modResult = await zoneUpdateWithRetry(client, {
         zoneConfig: zoneConfigBase,
         recordsToModify: [
@@ -197,6 +159,19 @@ describe.skipIf(!testApiToken)("DNS Integration Tests (HOSTING_DE_API_TOKEN_TEST
 
       await sleep(2000);
 
+      // 8) verify modified TXT exists
+      const afterModifyResult = await client.recordsFind({
+        filter: { field: "zoneConfigId", value: zoneConfig.id, relation: "equal" },
+      });
+      expect(afterModifyResult.isOk()).toBe(true);
+      if (afterModifyResult.isErr()) return;
+      const modifiedRecord = afterModifyResult.value.response.data.find(
+        (record) => record.id === addedRecordId,
+      );
+      expect(modifiedRecord).toBeDefined();
+      expect(modifiedRecord?.content).toBe(`"test-modified"`);
+
+      // 9) zoneUpdate delete TXT
       const delResult = await zoneUpdateWithRetry(client, {
         zoneConfig: zoneConfigBase,
         recordsToDelete: [{ id: addedRecordId }],

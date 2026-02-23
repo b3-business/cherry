@@ -144,7 +144,8 @@ result.match(
 Current tests focus on DNS only:
 
 - **All live tests use one dedicated test account token:** `HOSTING_DE_API_TOKEN_TEST1`
-- Integration tests are **self-contained**: each test creates and cleans up its own temporary DNS zone
+- DNS coverage is a **single full roundtrip integration file** (`test/dns-integration.test.ts`)
+- Roundtrip flow is run sequentially in one test: create zone -> query endpoints -> add/modify/delete record -> cleanup
 - No preconfigured zone variable is needed
 - API hosts are configurable via environment variables:
   - `HOSTINGDE_API_DEMO_HOST` (default derived from `https://demo.hosting.de/` => `demo.hosting.de`)
