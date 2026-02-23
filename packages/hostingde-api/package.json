@@ -1,7 +1,14 @@
 {
-  "name": "@b3-business/hosting.de",
+  "name": "@b3-business/hostingde",
   "version": "0.1.0",
   "description": "A tree-shakeable API client for hosting.de using Cherry",
+  "keywords": [
+    "hostingde",
+    "hosting.de",
+    "dns",
+    "api-client",
+    "cherry"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/b3-business/cherry",

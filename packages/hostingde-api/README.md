@@ -89,10 +89,12 @@ const filtered = await client.zonesFind({
 
 ## Authentication
 
-The hosting.de API uses token-based authentication. Get your API token from:
-https://secure.hosting.de/profile/api-keys
+The hosting.de API uses token-based authentication.
 
-The client automatically injects the `X-Auth-Token` header on every request.
+- Production account API keys: https://secure.hosting.de/profile/api-keys
+- Demo account API keys: https://demo.hosting.de/profile#:~:text=Deaktiviert-,API%20Keys,-Folgende%20Fehler%20sind
+
+The client automatically injects the `authToken` into the request body on every request.
 
 ---
 
@@ -141,9 +143,13 @@ result.match(
 
 Current tests focus on DNS only:
 
-- **Read-only smoke tests** against a real account (requires `HOSTING_DE_API_TOKEN`). These accept empty lists as valid responses to ensure requests are well-formed.
-- **DNS integration tests** that modify records in a main account zone (requires `HOSTING_DE_API_TOKEN` and a configured zone in `packages/hostingde-api/test/dns-integration.test.ts`).
-- **Low-risk CRUD tests** are present but **skipped** until a separate testing account is available (requires `HOSTING_DE_API_TOKEN_LOW_RISK` and `HOSTING_DE_LOW_RISK_ZONE`).
+- **Demo-first policy:** integration and CRUD tests run against the demo environment (`https://demo.hosting.de/`).
+  - Register test users at `https://demo.hosting.de/signup/`
+- **Demo integration tests** require:
+  - `HOSTING_DE_API_TOKEN_DEMO`
+  - `HOSTING_DE_DEMO_ZONE`
+  - (backward-compatible fallbacks: `HOSTING_DE_API_TOKEN_LOW_RISK`, `HOSTING_DE_LOW_RISK_ZONE`)
+- **Real-account smoke tests** are read-only only, and use `HOSTING_DE_API_TOKEN`.
 
 There are no other tests at the moment.
 
