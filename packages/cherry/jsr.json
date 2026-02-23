@@ -1,6 +1,6 @@
 {
   "name": "@b3-business/cherry",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "exports": "./src/index.ts",
   "publish": {
     "include": ["src/**/*.ts", "README.md", "LICENSE"]
