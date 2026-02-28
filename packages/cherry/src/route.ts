@@ -43,12 +43,7 @@ export function route<
     }
   }
 
-  return config as CherryRoute<
-    TPathParams,
-    TQueryParams,
-    TBodyParams,
-    TResponse
-  >;
+  return config as CherryRoute<TPathParams, TQueryParams, TBodyParams, TResponse>;
 }
 
 function getSchemaKeys(schema: v.BaseSchema<any, any, any>): string[] {

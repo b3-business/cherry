@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [0.3.3] - 2026-02-23
+
+### Changed
+
+- `valibot` is now declared as a peer dependency with a relaxed lower bound: `>=1.2.0`
+
 ## [0.3.2] - 2026-01-05
 
 ### Fixed

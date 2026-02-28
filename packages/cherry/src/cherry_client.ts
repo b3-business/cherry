@@ -13,9 +13,29 @@ import type {
   RoutesToClient,
   QueryParamOptions,
 } from "./types";
-import { HttpError, ValidationError, NetworkError, SerializationError, UnknownCherryError } from "./errors";
+import {
+  HttpError,
+  ValidationError,
+  NetworkError,
+  SerializationError,
+  UnknownCherryError,
+} from "./errors";
 
 const defaultFetcher: Fetcher = (req) => fetch(req.url, req.init);
+
+function toQueryStringValue(value: unknown, key: string): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  if (value instanceof Date) return value.toISOString();
+
+  throw new SerializationError(
+    "query",
+    key,
+    new TypeError(`Unsupported query value type: ${typeof value}`),
+  );
+}
 
 export function serializeQueryParams(
   params: Record<string, unknown>,
@@ -34,15 +54,15 @@ export function serializeQueryParams(
       switch (options?.arrayFormat ?? "repeat") {
         case "repeat":
           for (const item of value) {
-            searchParams.append(key, String(item));
+            searchParams.append(key, toQueryStringValue(item, key));
           }
           break;
         case "comma":
-          searchParams.set(key, value.join(","));
+          searchParams.set(key, value.map((item) => toQueryStringValue(item, key)).join(","));
           break;
         case "brackets":
           for (const item of value) {
-            searchParams.append(`${key}[]`, String(item));
+            searchParams.append(`${key}[]`, toQueryStringValue(item, key));
           }
           break;
         case "json":
@@ -54,7 +74,7 @@ export function serializeQueryParams(
           break;
       }
     } else {
-      searchParams.set(key, String(value));
+      searchParams.set(key, toQueryStringValue(value, key));
     }
   }
 

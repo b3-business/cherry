@@ -26,9 +26,7 @@ import type {
  */
 describe("HttpMethod", () => {
   it("should be a union of allowed methods", () => {
-    expectTypeOf<HttpMethod>().toEqualTypeOf<
-      "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
-    >();
+    expectTypeOf<HttpMethod>().toEqualTypeOf<"GET" | "POST" | "PUT" | "PATCH" | "DELETE">();
   });
 
   it("should accept valid methods", () => {
@@ -92,15 +90,13 @@ describe("QueryParamOptions", () => {
     const options: QueryParamOptions = {
       customSerializer: (params) =>
         Object.entries(params)
-          .map(([k, v]) => `${k}=${v}`)
+          .map(([k, v]) => `${k}=${String(v)}`)
           .join("&"),
     };
     // Assert customSerializer is defined before type checks
     const serializer = options.customSerializer!;
     expectTypeOf(serializer).toBeFunction();
-    expectTypeOf(serializer).parameters.toEqualTypeOf<
-      [params: Record<string, unknown>]
-    >();
+    expectTypeOf(serializer).parameters.toEqualTypeOf<[params: Record<string, unknown>]>();
     expectTypeOf(serializer).returns.toBeString();
   });
 
@@ -155,12 +151,7 @@ describe("CherryRoute", () => {
   });
 
   it("should accept route with only path params", () => {
-    const route: CherryRoute<
-      typeof PathSchema,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    > = {
+    const route: CherryRoute<typeof PathSchema, undefined, undefined, typeof ResponseSchema> = {
       method: "GET",
       path: { template: "/users/:id", paramNames: ["id"] },
       pathParams: PathSchema,
@@ -170,12 +161,7 @@ describe("CherryRoute", () => {
   });
 
   it("should accept route with only query params", () => {
-    const route: CherryRoute<
-      undefined,
-      typeof QuerySchema,
-      undefined,
-      typeof ResponseSchema
-    > = {
+    const route: CherryRoute<undefined, typeof QuerySchema, undefined, typeof ResponseSchema> = {
       method: "GET",
       path: { template: "/users", paramNames: [] },
       queryParams: QuerySchema,
@@ -185,12 +171,7 @@ describe("CherryRoute", () => {
   });
 
   it("should accept route with only body params", () => {
-    const route: CherryRoute<
-      undefined,
-      undefined,
-      typeof BodySchema,
-      typeof ResponseSchema
-    > = {
+    const route: CherryRoute<undefined, undefined, typeof BodySchema, typeof ResponseSchema> = {
       method: "POST",
       path: { template: "/users", paramNames: [] },
       bodyParams: BodySchema,
@@ -200,12 +181,7 @@ describe("CherryRoute", () => {
   });
 
   it("should accept route with no params", () => {
-    const route: CherryRoute<
-      undefined,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    > = {
+    const route: CherryRoute<undefined, undefined, undefined, typeof ResponseSchema> = {
       method: "GET",
       path: { template: "/health", paramNames: [] },
       response: ResponseSchema,
@@ -241,12 +217,7 @@ describe("InferRouteInput", () => {
   });
 
   it("should infer path params only", () => {
-    type Route = CherryRoute<
-      typeof PathSchema,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    >;
+    type Route = CherryRoute<typeof PathSchema, undefined, undefined, typeof ResponseSchema>;
     type Input = InferRouteInput<Route>;
 
     expectTypeOf<Input>().toEqualTypeOf<{
@@ -255,12 +226,7 @@ describe("InferRouteInput", () => {
   });
 
   it("should infer query params only", () => {
-    type Route = CherryRoute<
-      undefined,
-      typeof QuerySchema,
-      undefined,
-      typeof ResponseSchema
-    >;
+    type Route = CherryRoute<undefined, typeof QuerySchema, undefined, typeof ResponseSchema>;
     type Input = InferRouteInput<Route>;
 
     expectTypeOf<Input>().toEqualTypeOf<{
@@ -270,12 +236,7 @@ describe("InferRouteInput", () => {
   });
 
   it("should infer body params only", () => {
-    type Route = CherryRoute<
-      undefined,
-      undefined,
-      typeof BodySchema,
-      typeof ResponseSchema
-    >;
+    type Route = CherryRoute<undefined, undefined, typeof BodySchema, typeof ResponseSchema>;
     type Input = InferRouteInput<Route>;
 
     expectTypeOf<Input>().toEqualTypeOf<{
@@ -319,12 +280,7 @@ describe("InferRouteInput", () => {
   });
 
   it("should infer void when no params", () => {
-    type Route = CherryRoute<
-      undefined,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    >;
+    type Route = CherryRoute<undefined, undefined, undefined, typeof ResponseSchema>;
     type Input = InferRouteInput<Route>;
 
     expectTypeOf<Input>().toEqualTypeOf<void>();
@@ -347,12 +303,7 @@ describe("InferRouteOutput", () => {
   });
 
   it("should infer response output from schema", () => {
-    type Route = CherryRoute<
-      undefined,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    >;
+    type Route = CherryRoute<undefined, undefined, undefined, typeof ResponseSchema>;
     type Output = InferRouteOutput<Route>;
 
     expectTypeOf<Output>().toEqualTypeOf<{
@@ -365,12 +316,7 @@ describe("InferRouteOutput", () => {
 
   it("should handle array responses", () => {
     const ArraySchema = v.array(v.object({ id: v.string(), name: v.string() }));
-    type Route = CherryRoute<
-      undefined,
-      undefined,
-      undefined,
-      typeof ArraySchema
-    >;
+    type Route = CherryRoute<undefined, undefined, undefined, typeof ArraySchema>;
     type Output = InferRouteOutput<Route>;
 
     expectTypeOf<Output>().toEqualTypeOf<Array<{ id: string; name: string }>>();
@@ -391,12 +337,8 @@ describe("CherryResult", () => {
   });
 
   it("should handle different data types", () => {
-    expectTypeOf<CherryResult<string>>().toEqualTypeOf<
-      ResultAsync<string, CherryError>
-    >();
-    expectTypeOf<CherryResult<number>>().toEqualTypeOf<
-      ResultAsync<number, CherryError>
-    >();
+    expectTypeOf<CherryResult<string>>().toEqualTypeOf<ResultAsync<string, CherryError>>();
+    expectTypeOf<CherryResult<number>>().toEqualTypeOf<ResultAsync<number, CherryError>>();
     expectTypeOf<CherryResult<{ id: string }>>().toEqualTypeOf<
       ResultAsync<{ id: string }, CherryError>
     >();
@@ -479,8 +421,12 @@ describe("RoutesToClient", () => {
     type ClientTree = RoutesToClient<Tree>;
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
-      getUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
-      createUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
+      getUser: () => CherryResult<
+        InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>
+      >;
+      createUser: () => CherryResult<
+        InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>
+      >;
     }>();
   });
 
@@ -496,8 +442,12 @@ describe("RoutesToClient", () => {
 
     expectTypeOf<ClientTree>().toEqualTypeOf<{
       users: {
-        getUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
-        createUser: () => CherryResult<InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>>;
+        getUser: () => CherryResult<
+          InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>
+        >;
+        createUser: () => CherryResult<
+          InferRouteOutput<CherryRoute<undefined, undefined, undefined, any>>
+        >;
       };
     }>();
   });
@@ -512,12 +462,7 @@ describe("RoutesToClient", () => {
       undefined,
       typeof ResponseSchema
     >;
-    type RouteWithoutParams = CherryRoute<
-      undefined,
-      undefined,
-      undefined,
-      typeof ResponseSchema
-    >;
+    type RouteWithoutParams = CherryRoute<undefined, undefined, undefined, typeof ResponseSchema>;
 
     type Tree = {
       withParams: RouteWithParams;
@@ -533,9 +478,7 @@ describe("RoutesToClient", () => {
       (params: { id: string }) => CherryResult<{ id: string }>
     >();
 
-    expectTypeOf<WithoutParamsMethod>().toEqualTypeOf<
-      () => CherryResult<{ id: string }>
-    >();
+    expectTypeOf<WithoutParamsMethod>().toEqualTypeOf<() => CherryResult<{ id: string }>>();
   });
 });
 

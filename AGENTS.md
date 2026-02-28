@@ -3,6 +3,8 @@
 **Generated:** 2026-01-05
 **Branch:** main
 
+IMPORTANT: before you do anything else, run the beans prime command and heed its output.
+
 ## OVERVIEW
 
 Tree-shakeable API client factory with Valibot validation and neverthrow error handling. Routes are plain objects - import only what you use.
@@ -12,29 +14,29 @@ Tree-shakeable API client factory with Valibot validation and neverthrow error h
 ```
 cherry/                          # Monorepo root
 ├── packages/
-│   └── cherry/                  # Core library
-│       ├── src/
-│       │   ├── index.ts
-│       │   ├── cherry_client.ts
-│       │   ├── route.ts
-│       │   ├── path.ts
-│       │   ├── types.ts
-│       │   └── errors.ts
-│       └── test/
-│           ├── types.test.ts
-│           ├── errors.test.ts
-│           ├── path.test.ts
-│           ├── route.test.ts
-│           ├── cherry_client.test.ts
-│           └── integration.test.ts
-├── examples/                    # Example API implementations
-│   └── jsonplaceholder/         # JSONPlaceholder API example
-│       ├── src/
-│       │   ├── routes.ts
-│       │   ├── client.ts
-│       │   └── index.ts
-│       └── test/
-│           └── integration.test.ts
+│   ├── cherry/                  # Core library
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── cherry_client.ts
+│   │   │   ├── route.ts
+│   │   │   ├── path.ts
+│   │   │   ├── types.ts
+│   │   │   └── errors.ts
+│   │   └── test/
+│   │       ├── types.test.ts
+│   │       ├── errors.test.ts
+│   │       ├── path.test.ts
+│   │       ├── route.test.ts
+│   │       ├── cherry_client.test.ts
+│   │       └── integration.test.ts
+│   ├── jsonplaceholder/         # JSONPlaceholder API example package
+│   │   ├── src/
+│   │   │   ├── routes.ts
+│   │   │   ├── client.ts
+│   │   │   └── index.ts
+│   │   └── test/
+│   │       └── integration.test.ts
+│   └── pokeapi/                 # PokeAPI example package
 ├── agent/
 │   └── ARCHITECTURE.md
 └── playground/
@@ -130,12 +132,12 @@ A good roundtrip tests the full lifecycle. Examples:
 
 ### 3. Create the Package Structure
 ```bash
-mkdir -p examples/{api-name}/src examples/{api-name}/test
+mkdir -p packages/{api-name}/src packages/{api-name}/test
 ```
 
 ### 4. Required Files
 
-**package.json** (`examples/{api-name}/package.json`):
+**package.json** (`packages/{api-name}/package.json`):
 ```json
 {
   "name": "@b3b/cherry-example-{api-name}",
@@ -160,7 +162,7 @@ mkdir -p examples/{api-name}/src examples/{api-name}/test
 }
 ```
 
-**tsconfig.json** (`examples/{api-name}/tsconfig.json`):
+**tsconfig.json** (`packages/{api-name}/tsconfig.json`):
 ```json
 {
   "compilerOptions": {
@@ -271,6 +273,7 @@ The GitHub Actions workflow (`.github/workflows/publish.yml`) will:
 ## AGENT NOTES
 
 - **Web search fallback**: If Exa web search fails, use Playwright MCP to navigate and scrape documentation directly
+- **Beans scope**: Do not create beans for pure git operations (e.g. checkout, push, tag)
 - `playground/` is empty - use for API experiments
 - README shows final API design, not current state
 - ARCHITECTURE.md is the source of truth for implementation phases

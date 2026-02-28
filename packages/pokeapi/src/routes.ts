@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { route, path, param } from "@b3b/cherry";
+import { route, path, param } from "@b3-business/cherry";
 
 export const NamedAPIResourceSchema = v.object({
   name: v.string(),

@@ -3,7 +3,7 @@
   "plugins": ["typescript"],
   "categories": {
     "correctness": "error",
-    "suspicious": "warn"
+    "suspicious": "error"
   },
   "rules": {
     "typescript/no-floating-promises": "error",
@@ -11,8 +11,8 @@
     "typescript/no-unsafe-type-assertion": "off",
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/no-unnecessary-type-arguments": "off",
-    "typescript/restrict-template-expressions": "warn",
-    "typescript/no-base-to-string": "warn",
-    "typescript/await-thenable": "warn"
+    "typescript/restrict-template-expressions": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/await-thenable": "error"
   }
 }

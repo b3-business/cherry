@@ -44,24 +44,23 @@ type IsEmptyObject<T> = keyof T extends never ? true : false;
 
 type InferSchemaInput<T> = T extends AnySchema ? InferInput<T> : {};
 
-type BuildRouteInputFromProps<
-  TPathParams,
-  TQueryParams,
-  TBodyParams
-> = InferSchemaInput<TPathParams> &
-    InferSchemaInput<TQueryParams> &
-    InferSchemaInput<TBodyParams>;
+type BuildRouteInputFromProps<TPathParams, TQueryParams, TBodyParams> =
+  InferSchemaInput<TPathParams> & InferSchemaInput<TQueryParams> & InferSchemaInput<TBodyParams>;
 
-export type InferRouteInput<T> = 
-  T extends { pathParams?: infer TPath; queryParams?: infer TQuery; bodyParams?: infer TBody }
-    ? IsEmptyObject<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
-      ? void
-      : Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
-    : never;
+export type InferRouteInput<T> = T extends {
+  pathParams?: infer TPath;
+  queryParams?: infer TQuery;
+  bodyParams?: infer TBody;
+}
+  ? IsEmptyObject<BuildRouteInputFromProps<TPath, TQuery, TBody>> extends true
+    ? void
+    : Prettify<BuildRouteInputFromProps<TPath, TQuery, TBody>>
+  : never;
 
 /** Infer response output from a route */
-export type InferRouteOutput<T extends AnyCherryRoute> =
-  T["response"] extends AnySchema ? InferOutput<T["response"]> : never;
+export type InferRouteOutput<T extends AnyCherryRoute> = T["response"] extends AnySchema
+  ? InferOutput<T["response"]>
+  : never;
 
 /** Cherry result type - always ResultAsync */
 export type CherryResult<T> = ResultAsync<T, CherryError>;

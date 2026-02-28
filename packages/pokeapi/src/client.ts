@@ -1,4 +1,4 @@
-import { createCherryClient } from "@b3b/cherry";
+import { createCherryClient } from "@b3-business/cherry";
 import {
   listPokemon,
   getPokemon,

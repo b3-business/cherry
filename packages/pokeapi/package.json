@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "check": "oxlint --type-aware --type-check src test",
-    "typecheck": "tsc --noEmit -p .",
+    "format": "oxfmt --write src test",
+    "format:check": "oxfmt --check src test",
+    "typecheck": "tsgo --noEmit -p .",
+    "typecheck:tsc": "tsc --noEmit -p .",
     "test": "bun test"
   },
   "dependencies": {

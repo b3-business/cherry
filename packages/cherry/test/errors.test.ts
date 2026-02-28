@@ -280,7 +280,7 @@ describe("cherryErr", () => {
     const error = new HttpError(404, "Not Found");
     const result = await cherryErr<string>(error);
 
-    await result.match(
+    result.match(
       () => {
         throw new Error("Should not be Ok");
       },

@@ -120,7 +120,7 @@ describe("serializeQueryParams()", () => {
   it("uses custom serializer when provided", () => {
     const customSerializer = (params: Record<string, unknown>) =>
       Object.entries(params)
-        .map(([k, v]) => `custom_${k}=${v}`)
+        .map(([k, v]) => `custom_${k}=${String(v)}`)
         .join("&");
 
     const result = serializeQueryParams({ page: 1 }, { customSerializer });

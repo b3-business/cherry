@@ -48,10 +48,7 @@ export function optional<T extends string>(name: T): OptionalParam<T> {
  * // { template: "/health", paramNames: [] }
  * ```
  */
-export function path(
-  strings: TemplateStringsArray,
-  ...params: AnyPathParam[]
-): PathTemplate {
+export function path(strings: TemplateStringsArray, ...params: AnyPathParam[]): PathTemplate {
   const paramNames: string[] = [];
   let template = strings[0];
 
