@@ -37,7 +37,7 @@ cherry/                          # Monorepo root
 │   │   └── test/
 │   │       └── integration.test.ts
 │   └── pokeapi/                 # PokeAPI example package
-├── agent/
+├── meta/
 │   └── ARCHITECTURE.md
 └── playground/
 ```
@@ -49,7 +49,7 @@ cherry/                          # Monorepo root
 | Add error type | `packages/cherry/src/errors.ts` | Extend `CherryError`, set `type` and `retryable` |
 | Add/modify types | `packages/cherry/src/types.ts` | Uses Valibot `BaseSchema` generics |
 | Type tests | `packages/cherry/test/types.test.ts` | Uses `expect-type` for compile-time checks |
-| Implementation plan | `agent/ARCHITECTURE.md` | Phase-by-phase build guide |
+| Implementation plan | `meta/ARCHITECTURE.md` | Phase-by-phase build guide |
 | Path templates | `packages/cherry/src/path.ts` | `path()`, `param()`, `optional()` tagged templates |
 | Route builder | `packages/cherry/src/route.ts` | `route()` with validation |
 | Client | `packages/cherry/src/cherry_client.ts` | `createCherryClient()`, `serializeQueryParams()` |
