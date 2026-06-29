@@ -5,8 +5,8 @@
     "test": "deno test --allow-net test/*.deno-test.ts"
   },
   "imports": {
-    "@b3-business/cherry": "jsr:@b3-business/cherry@^0.3.2",
-    "valibot": "npm:valibot@^1.2.0",
+    "@b3-business/cherry": "jsr:@b3-business/cherry@^0.3.3",
+    "valibot": "npm:valibot@^1.4.1",
     "neverthrow": "npm:neverthrow@^8.2.0"
   }
 }

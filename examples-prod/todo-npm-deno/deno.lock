@@ -3,9 +3,9 @@
   "specifiers": {
     "jsr:@std/assert@*": "1.0.14",
     "jsr:@std/internal@^1.0.10": "1.0.12",
-    "npm:@b3-business/cherry@~0.3.1": "0.3.1",
+    "npm:@b3-business/cherry@~0.3.3": "0.3.3_valibot@1.4.1",
     "npm:neverthrow@^8.2.0": "8.2.0",
-    "npm:valibot@^1.2.0": "1.2.0"
+    "npm:valibot@^1.4.1": "1.4.1"
   },
   "jsr": {
     "@std/assert@1.0.14": {
@@ -19,8 +19,8 @@
     }
   },
   "npm": {
-    "@b3-business/cherry@0.3.1": {
-      "integrity": "sha512-doNdfFfo2kSWRTPxocLsLQlpsHLJ9pzjjJYCSHyqkJlgHM1z2LuUJ+R8Fm9Tj59usswrxinq+1dc9sYagj9QXA==",
+    "@b3-business/cherry@0.3.3_valibot@1.4.1": {
+      "integrity": "sha512-E8RvsGHVCiMd3beGHKVgQfi1Cisekp+Z/OT3VbfiOwMqT6s4ri1w9CJkZyOeizrIM/BHsrYW7LKsQIVCqcSmtg==",
       "dependencies": [
         "neverthrow",
         "valibot"
@@ -37,15 +37,15 @@
         "@rollup/rollup-linux-x64-gnu"
       ]
     },
-    "valibot@1.2.0": {
-      "integrity": "sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg=="
+    "valibot@1.4.1": {
+      "integrity": "sha512-klCmFTz2jeDluy9RwX+F884TCiogtdBJ/YaxSx1EOBYXa3NXNWj8kR1jjN8rzluwojJVWWaHJ4r1U5LfICnM3g=="
     }
   },
   "workspace": {
     "dependencies": [
-      "npm:@b3-business/cherry@~0.3.1",
+      "npm:@b3-business/cherry@~0.3.3",
       "npm:neverthrow@^8.2.0",
-      "npm:valibot@^1.2.0"
+      "npm:valibot@^1.4.1"
     ]
   }
 }

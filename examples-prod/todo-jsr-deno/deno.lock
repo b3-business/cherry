@@ -1,18 +1,19 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@b3-business/cherry@~0.3.1": "0.3.1",
+    "jsr:@b3-business/cherry@~0.3.3": "0.3.3",
     "jsr:@std/assert@*": "1.0.14",
     "jsr:@std/internal@^1.0.10": "1.0.12",
     "npm:neverthrow@^8.2.0": "8.2.0",
-    "npm:valibot@^1.2.0": "1.2.0"
+    "npm:valibot@^1.2.0": "1.4.1",
+    "npm:valibot@^1.4.1": "1.4.1"
   },
   "jsr": {
-    "@b3-business/cherry@0.3.1": {
-      "integrity": "89c06bb1d4b4cb2d6cb9c3d3d93ec6368ae6c59b2843b7d6927d3dd50c7a304f",
+    "@b3-business/cherry@0.3.3": {
+      "integrity": "dcfe82c038501bcfc29431400d316218a1bfd7f9572f48de550059ffab2ff876",
       "dependencies": [
         "npm:neverthrow",
-        "npm:valibot"
+        "npm:valibot@^1.2.0"
       ]
     },
     "@std/assert@1.0.14": {
@@ -26,8 +27,8 @@
     }
   },
   "npm": {
-    "@rollup/rollup-linux-x64-gnu@4.54.0": {
-      "integrity": "sha512-WGt5J8Ij/rvyqpFexxk3ffKqqbLf9AqrTBbWDk7ApGUzaIs6V+s2s84kAxklFwmMF/vBNGrVdYgbblCOFFezMQ==",
+    "@rollup/rollup-linux-x64-gnu@4.62.2": {
+      "integrity": "sha512-5BqxR/pshjey51iliyzTD5Xi3EN0aLmQ2lZ3lvefVV9c82BvrLo2/6OT55iifpWBufs6kdwWbuOKS841DrmK9A==",
       "os": ["linux"],
       "cpu": ["x64"]
     },
@@ -37,15 +38,15 @@
         "@rollup/rollup-linux-x64-gnu"
       ]
     },
-    "valibot@1.2.0": {
-      "integrity": "sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg=="
+    "valibot@1.4.1": {
+      "integrity": "sha512-klCmFTz2jeDluy9RwX+F884TCiogtdBJ/YaxSx1EOBYXa3NXNWj8kR1jjN8rzluwojJVWWaHJ4r1U5LfICnM3g=="
     }
   },
   "workspace": {
     "dependencies": [
-      "jsr:@b3-business/cherry@~0.3.1",
+      "jsr:@b3-business/cherry@~0.3.3",
       "npm:neverthrow@^8.2.0",
-      "npm:valibot@^1.2.0"
+      "npm:valibot@^1.4.1"
     ]
   }
 }
